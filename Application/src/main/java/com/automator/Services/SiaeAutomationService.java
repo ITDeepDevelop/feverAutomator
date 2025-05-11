@@ -1,11 +1,29 @@
 package com.automator.service;
+import com.microsoft.playwright.*;
 
 public class SiaeAutomationService {
 
     public boolean runOperation1() {
         // logica vera dell'operazione 1
-        System.out.println("Esecuzione Operazione 1");
-        return true; // o false in base all'esito reale
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
+            BrowserContext context = browser.newContext();
+            Page page = context.newPage();
+
+            page.navigate("https://example.com");
+            page.click("text=Accedi");
+            page.fill("#username", "tuo_username");
+            page.fill("#password", "tua_password");
+            page.click("button[type=submit]");
+
+            page.close();
+            browser.close();
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public boolean runOperation2() {
