@@ -1,5 +1,7 @@
-package com.example;
+package com.automator;
 
+import com.automator.Pages.SiaePage;
+import com.automator.Pages.LeaPage;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;

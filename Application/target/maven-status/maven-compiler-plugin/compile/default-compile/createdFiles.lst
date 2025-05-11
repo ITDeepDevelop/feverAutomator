@@ -1,3 +1,4 @@
-com/example/LeaPage.class
-com/example/MainApp.class
-com/example/SiaePage.class
+com/automator/MainApp.class
+com/automator/Pages/SiaePage.class
+com/automator/service/SiaeAutomationService.class
+com/automator/Pages/LeaPage.class

@@ -1,3 +1,4 @@
-/Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/LeaPage.java
 /Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/MainApp.java
-/Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/SiaePage.java
+/Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/Pages/LeaPage.java
+/Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/Pages/SiaePage.java
+/Users/david/Progetti/FeverAutomator/feverAutomator/Application/src/main/java/com/automator/Services/SiaeAutomationService.java

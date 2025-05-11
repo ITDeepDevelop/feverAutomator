@@ -1,5 +1,6 @@
-package com.example;
+package com.automator.Pages;
 
+import com.automator.service.SiaeAutomationService;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -12,6 +13,7 @@ import java.io.File;
 
 public class SiaePage extends VBox {
 
+    private final SiaeAutomationService automationService = new SiaeAutomationService();
     private final Label fileNameLabel = new Label("Nessun file selezionato");
 
     public SiaePage() {
@@ -50,7 +52,10 @@ public class SiaePage extends VBox {
         Button actionButton1 = new Button("Azione 1");
         actionButton1.setStyle("-fx-font-size: 14px;");
         Region resultIcon1 = createResultIcon();
-        actionButton1.setOnAction(e -> updateIcon(resultIcon1, simulateOperation()));
+        actionButton1.setOnAction(e -> {
+            boolean result = automationService.runOperation1();
+            updateIcon(resultIcon1, result);
+        });
         HBox box1 = new HBox(10, opLabel1, actionButton1, resultIcon1);
         box1.setStyle("-fx-alignment: center;");
 
@@ -60,7 +65,10 @@ public class SiaePage extends VBox {
         Button actionButton2 = new Button("Azione 2");
         actionButton2.setStyle("-fx-font-size: 14px;");
         Region resultIcon2 = createResultIcon();
-        actionButton2.setOnAction(e -> updateIcon(resultIcon2, simulateOperation()));
+        actionButton2.setOnAction(e -> {
+            boolean result = automationService.runOperation2();
+            updateIcon(resultIcon2, result);
+        });
         HBox box2 = new HBox(10, opLabel2, actionButton2, resultIcon2);
         box2.setStyle("-fx-alignment: center;");
 
@@ -70,7 +78,10 @@ public class SiaePage extends VBox {
         Button actionButton3 = new Button("Azione 3");
         actionButton3.setStyle("-fx-font-size: 14px;");
         Region resultIcon3 = createResultIcon();
-        actionButton3.setOnAction(e -> updateIcon(resultIcon3, simulateOperation()));
+        actionButton3.setOnAction(e -> {
+            boolean result = automationService.runOperation3();
+            updateIcon(resultIcon3, result);
+        });
         HBox box3 = new HBox(10, opLabel3, actionButton3, resultIcon3);
         box3.setStyle("-fx-alignment: center;");
 
@@ -80,7 +91,10 @@ public class SiaePage extends VBox {
         Button actionButton4 = new Button("Azione 4");
         actionButton4.setStyle("-fx-font-size: 14px;");
         Region resultIcon4 = createResultIcon();
-        actionButton4.setOnAction(e -> updateIcon(resultIcon4, simulateOperation()));
+        actionButton4.setOnAction(e -> {
+            boolean result = automationService.runOperation4();
+            updateIcon(resultIcon4, result);
+        });
         HBox box4 = new HBox(10, opLabel4, actionButton4, resultIcon4);
         box4.setStyle("-fx-alignment: center;");
 

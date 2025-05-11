@@ -1,4 +1,5 @@
-package com.example;
+package com.automator.Pages;
+
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
