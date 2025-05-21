@@ -11,10 +11,7 @@ public class SiaeAutomationService {
             Page page = context.newPage();
 
             page.navigate("https://example.com");
-            page.click("text=Accedi");
-            page.fill("#username", "tuo_username");
-            page.fill("#password", "tua_password");
-            page.click("button[type=submit]");
+            page.waitForTimeout(5000);
 
             page.close();
             browser.close();
