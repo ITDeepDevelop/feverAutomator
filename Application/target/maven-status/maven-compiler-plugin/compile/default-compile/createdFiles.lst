@@ -1,9 +1,0 @@
-com/automator/controller/LeaController.class
-com/automator/Pages/ExcelPage.class
-com/automator/components/ExcelTableView.class
-com/automator/Pages/SiaePage.class
-com/automator/components/ExcelTableView$1.class
-com/automator/Pages/LeaPage.class
-com/automator/MainApp.class
-com/automator/controller/SiaeController.class
-com/automator/model/SiaeAutomationService.class

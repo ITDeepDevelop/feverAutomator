@@ -1,9 +1,9 @@
-package com.automator.Services;
+package com.automator.model.services;
 import com.microsoft.playwright.*;
 
-public class SiaeAutomationService {
+public class LeaAutomationService {
 
-    public boolean runOperation1() {
+    public boolean op1() {
         // logica vera dell'operazione 1
         try (Playwright playwright = Playwright.create()) {
             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
@@ -23,17 +23,17 @@ public class SiaeAutomationService {
         }
     }
 
-    public boolean runOperation2() {
+    public boolean op2() {
         System.out.println("Esecuzione Operazione 2");
         return Math.random() < 0.5;
     }
 
-    public boolean runOperation3() {
+    public boolean op3() {
         System.out.println("Esecuzione Operazione 3");
         return true;
     }
 
-    public boolean runOperation4() {
+    public boolean op4() {
         System.out.println("Esecuzione Operazione 4");
         return false;
     }

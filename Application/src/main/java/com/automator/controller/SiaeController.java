@@ -1,6 +1,6 @@
 package com.automator.controller;
 
-import com.automator.model.SiaeAutomationService;
+import com.automator.model.services.SiaeAutomationService;
 
 public class SiaeController {
     private final SiaeAutomationService siaeService;
