@@ -1,4 +1,6 @@
-package com.automator.Pages;
+package com.automator.view.pages;
+
+//package com.automator.Pages;
 
 import com.automator.controller.SiaeController;
 

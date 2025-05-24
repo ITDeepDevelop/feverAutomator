@@ -1,8 +1,8 @@
 package com.automator;
 
-import com.automator.Pages.ExcelPage;
-import com.automator.Pages.LeaPage;
-import com.automator.Pages.SiaePage;
+import com.automator.view.pages.ExcelPage;
+import com.automator.view.pages.LeaPage;
+import com.automator.view.pages.SiaePage;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;

@@ -1,8 +1,10 @@
-package com.automator.Pages;
+package com.automator.view.pages;
+
+//package com.automator.view.components.ExcelTableView;
 
 import java.io.File;
 
-import com.automator.components.ExcelTableView;
+import com.automator.view.components.ExcelTableView;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

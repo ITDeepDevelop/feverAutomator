@@ -1,4 +1,6 @@
-package com.automator.components;
+package com.automator.view.components;
+
+//package com.automator.components;
 
 import java.io.File;
 import java.io.FileInputStream;
