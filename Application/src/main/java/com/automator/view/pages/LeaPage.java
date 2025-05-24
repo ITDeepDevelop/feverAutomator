@@ -20,7 +20,7 @@ public class LeaPage extends BorderPane {
     public LeaPage() {
         leaController = new LeaController();
         // Header
-        Label headerLabel = new Label("Operazioni LEA");
+        Label headerLabel = new Label("Operazioni LEAAA");
         headerLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         VBox header = new VBox(headerLabel);
         header.setPadding(new Insets(20));
