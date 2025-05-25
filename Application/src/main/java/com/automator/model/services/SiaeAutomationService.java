@@ -56,10 +56,8 @@ public class SiaeAutomationService {
             // Login
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
 
-            // Accesso con APMO_STD
-            page.locator("#APMO_STD")
-                    .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
-                    .click();
+            // Accesso con Assegna Bordero
+            page.locator("#APMO_STD").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi")).click();
 
             // Click su “Da assegnare”
             page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da assegnare")).click();
