@@ -3,18 +3,17 @@ package com.automator.view.pages;
 //package com.automator.Pages;
 
 import com.automator.controller.SiaeController;
-
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 
 public class SiaePage extends BorderPane {
     private final SiaeController siaeController;
+    private final TextField emailField;
+    private final PasswordField passwordField;
+
+
 
     public SiaePage() {
         siaeController = new SiaeController();
@@ -27,11 +26,20 @@ public class SiaePage extends BorderPane {
         header.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 5;");
         this.setTop(header);
 
-        // Area centrale con i pulsanti delle operazioni
-        VBox operationsBox = new VBox(20);
-        operationsBox.setPadding(new Insets(20));
-        operationsBox.setAlignment(Pos.CENTER);
-        operationsBox.setStyle("-fx-background-color: white; -fx-background-radius: 5;");
+        // Campi email e password
+        Label emailLabel = new Label("Email:");
+        emailField = new TextField();
+        emailField.setPromptText("Inserisci l'email");
+
+        Label passwordLabel = new Label("Password:");
+        passwordField = new PasswordField();
+        passwordField.setPromptText("Inserisci la password");
+
+        VBox credentialsBox = new VBox(10, emailLabel, emailField, passwordLabel, passwordField);
+        credentialsBox.setAlignment(Pos.CENTER_LEFT);
+        credentialsBox.setPadding(new Insets(10));
+
+
 
         // Pulsanti delle operazioni (con resultIcon)
         HBox op1 = createOperationBox("Operazione 1", "#3498db");
@@ -39,11 +47,21 @@ public class SiaePage extends BorderPane {
         HBox op3 = createOperationBox("Operazione 3", "#e67e22");
         HBox op4 = createOperationBox("Operazione 4", "#9b59b6");
 
-        operationsBox.getChildren().addAll(op1, op2, op3, op4);
+        // Box verticale con i bottoni
+        // Area centrale con i pulsanti delle operazioni
+        VBox operationsBox = new VBox(20, op1, op2, op3, op4);
+        operationsBox.setPadding(new Insets(20));
+        operationsBox.setAlignment(Pos.CENTER);
+        operationsBox.setStyle("-fx-background-color: white; -fx-background-radius: 5;");
+        operationsBox.setAlignment(Pos.CENTER_LEFT);
 
-        HBox centerWrapper = new HBox(operationsBox);
+        // Wrapper orizzontale: email+password a sinistra, bottoni a destra
+        HBox centerWrapper = new HBox(40, credentialsBox, operationsBox);
         centerWrapper.setAlignment(Pos.CENTER);
+        centerWrapper.setPadding(new Insets(20));
+
         this.setCenter(centerWrapper);
+
     }
 
     private HBox createOperationBox(String text, String color) {
@@ -56,7 +74,9 @@ public class SiaePage extends BorderPane {
 
         Region resultIcon = createResultIcon();
         button.setOnAction(e -> {
-            boolean success = handleOperation(text);
+            String email = emailField.getText();
+            String password = passwordField.getText();
+            boolean success = handleOperation(text,email,password);
             updateIcon(resultIcon, success);
         });
 
@@ -64,10 +84,10 @@ public class SiaePage extends BorderPane {
         return box;
     }
 
-    private boolean handleOperation(String operationName) {
-        return siaeController.handleOperation(operationName);
-        // TODO: Mostrare feedback all'utente
+    private boolean handleOperation(String operationName, String email, String password) {
+        return siaeController.handleOperation(operationName, email, password);
     }
+
 
     private Region createResultIcon() {
         Region icon = new Region();

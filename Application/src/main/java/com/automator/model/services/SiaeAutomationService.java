@@ -28,8 +28,9 @@ public class SiaeAutomationService {
         return Math.random() < 0.5;
     }
 
-    public boolean runOperation3() {
-        System.out.println("Esecuzione Operazione 3");
+    public boolean assignBordero(String email, String password) {
+        System.out.println(email);
+        System.out.println(password);
         return true;
     }
 

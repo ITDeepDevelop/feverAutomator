@@ -9,14 +9,14 @@ public class SiaeController {
         siaeService = new SiaeAutomationService();
     }
 
-    public boolean handleOperation(String operationName) {
+    public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
             case "Operazione 1":
                 return siaeService.runOperation1();
             case "Operazione 2":
                 return siaeService.runOperation2();
             case "Operazione 3":
-                return siaeService.runOperation3();
+                return siaeService.assignBordero(email,password);
             case "Operazione 4":
                 return siaeService.runOperation4();
             default:
