@@ -57,37 +57,65 @@ public class SiaeAutomationService {
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
 
             // Accesso con Assegna Bordero
-            page.locator("#APMO_STD").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi")).click();
+            page.locator("#APMO_STD")
+                    .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
+                    .click();
 
             // Click su “Da assegnare”
             page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da assegnare")).click();
 
-            // Click su primo bottone "assegna"
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("assegna")).first().click();
+            // Cambia pagina: seleziona 50 righe visibili
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5")).click();
+            page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50")).click();
 
-            // Tab E-mail
-            page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
+            // Aspetta che la tabella sia visibile
+            page.waitForSelector("table tbody tr");
 
-            // Textbox email
-            page.getByRole(AriaRole.TEXTBOX).click();
-            page.getByRole(AriaRole.TEXTBOX).fill("rodella.et@gmail.com");
+            Locator rows = page.locator("table tbody tr");
+            int rowCount = rows.count();
 
-            // Cerca
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
+            // Itera sulle prime 10 righe
+            for (int i = 0; i < Math.min(rowCount, 10); i++) {
+                Locator row = rows.nth(i);
+                System.out.println("▶ Riga " + i + ": clic su 'assegna'");
 
-            // Se esiste risultato
-            Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName("rodella.et@gmail.com"));
-            page.waitForTimeout(2000);
+                Locator assegnaButton = row.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("assegna"));
+                if (assegnaButton.count() > 0) {
+                    assegnaButton.first().click();
+                }
 
-            if (cell.isVisible()) {
-                page.getByRole(AriaRole.RADIO).check();
-                // TODO: click su conferma
-            } else {
-                // Altrimenti: direttore non trovato
-                page.getByText("Non hai trovato il direttore").click();
+                // Tab E-mail
+                page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
+
+                // Casella email
                 page.getByRole(AriaRole.TEXTBOX).click();
-                page.getByRole(AriaRole.TEXTBOX).fill("asdsad@adas.it");
-                // TODO: click su conferma
+                page.getByRole(AriaRole.TEXTBOX).fill("rodella.et@gmail.com"); // ← da DB in futuro
+
+                // Cerca
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
+
+                page.waitForTimeout(1000); // per sicurezza
+
+                Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName("rodella.et@gmail.com"));
+
+                if (cell.count() > 0 && cell.first().isVisible()) {
+                    System.out.println("✔ Email trovata nella tabella");
+                    page.getByRole(AriaRole.RADIO).check();
+                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+                    // TODO: click su "Conferma"
+                } else {
+                    System.out.println("❌ Email non trovata, inserimento manuale");
+                    page.getByText("Non hai trovato il direttore").click();
+                    page.getByRole(AriaRole.TEXTBOX).click();
+                    page.getByRole(AriaRole.TEXTBOX).fill("asdsad@adas.it");
+                    // ⬇️ Torna alla tabella principale
+                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+                    // TODO: click su "Conferma"
+                }
+
+                // Attendi un attimo prima della prossima riga
+                page.waitForTimeout(500);
             }
 
             // Fine
