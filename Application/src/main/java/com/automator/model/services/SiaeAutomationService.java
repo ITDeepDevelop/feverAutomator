@@ -151,7 +151,7 @@ public class SiaeAutomationService {
         }
     }
 
-    private static final String CHECKPOINT_PATH = "../checkpoints/checkpoint.properties";
+    private static final String CHECKPOINT_PATH = "../Checkpoints/checkpoint.properties";
 
     private void saveCheckpoint(int page, int row) {
         try {
