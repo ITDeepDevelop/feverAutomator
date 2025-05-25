@@ -3,6 +3,11 @@ package com.automator.model.services;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
+import java.io.*;
 
 public class SiaeAutomationService {
 
@@ -72,8 +77,11 @@ public class SiaeAutomationService {
 
     private void navigateToAssignSection(Page page) {
         page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da assegnare")).click();
-        page.waitForTimeout(500);
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5")).click();
+        Locator button5 = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5"));
+        button5.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        button5.click();
         Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
         option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
         option50.click();
@@ -88,14 +96,22 @@ public class SiaeAutomationService {
         options.nth(0).click();  // remove focus
 
         for (int i = 0; i < optionCount; i++) {
-            System.out.println("▶ Elaboro pagina/opzione: " + (i + 1));
+            System.out.println("▶ Elaboro pagina: " + (i + 1) + "#################");
+            System.out.println("\n");
             page.waitForSelector("table tbody tr");
 
             Locator rows = page.locator("table tbody tr");
             int rowCount = rows.count();
 
             for (int j = 0; j < rowCount; j++) {
-                processRow(page, rows.nth(j));
+                try {
+                    processRow(page, rows.nth(j), j+1);
+                    saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
+                } catch (Exception e) {
+                    System.err.println("❌ Errore alla pagina " + i + ", riga " + j);
+                    saveCheckpoint(i, j); // Salva dove si è fermato
+                    throw e; // facoltativo: puoi anche continuare
+                }
             }
 
             menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(Integer.toString(i)));
@@ -106,8 +122,8 @@ public class SiaeAutomationService {
         }
     }
 
-    private void processRow(Page page, Locator row) {
-        System.out.println("Riga: clic su 'assegna'");
+    private void processRow(Page page, Locator row, int index) {
+        System.out.println("Record numero " + index +": clic su 'assegna'");
         Locator assegnaButton = row.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("assegna"));
         if (assegnaButton.count() > 0) {
             assegnaButton.first().click();
@@ -134,4 +150,26 @@ public class SiaeAutomationService {
             // TODO: click su "Conferma"
         }
     }
+
+    private static final String CHECKPOINT_PATH = "../checkpoints/checkpoint.properties";
+
+    private void saveCheckpoint(int page, int row) {
+        try {
+            Path checkpointFile = Paths.get(CHECKPOINT_PATH);
+            Files.createDirectories(checkpointFile.getParent()); // crea cartella checkpoints/ se non esiste
+
+            Properties props = new Properties();
+            props.setProperty("page", String.valueOf(page));
+            props.setProperty("row", String.valueOf(row));
+
+            try (FileWriter writer = new FileWriter(checkpointFile.toFile())) {
+                props.store(writer, "Checkpoint salvato nel progetto corrente");
+                System.out.println("Checkpoint salvato in: " + checkpointFile.toAbsolutePath());
+            }
+        } catch (IOException e) {
+            System.err.println("Errore nel salvataggio del checkpoint:");
+            e.printStackTrace();
+        }
+    }
+
 }
