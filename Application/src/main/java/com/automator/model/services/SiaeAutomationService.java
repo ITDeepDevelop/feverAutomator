@@ -125,16 +125,32 @@ public class SiaeAutomationService {
                 }
             }
 
-            menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(Integer.toString(i)));
-            menu.click();
-            page.waitForSelector("ul[role='listbox'] li[role='option']");
-            page.locator("ul[role='listbox'] li[role='option']").nth(i).click();
-            page.waitForTimeout(500);
+            if(i!=optionCount-1) {
+                page.locator("span[title='Previous Page'] + span button").click();
+                page.waitForTimeout(1000);
+            }
         }
     }
 
     private void processRow(Page page, Locator row, int index) {
         System.out.println("Record numero " + index +": clic su 'assegna'");
+        // Stampa contenuto effettivo della riga
+        Locator cells = row.locator("td");
+        int cellCount = cells.count();
+
+        StringBuilder rowContent = new StringBuilder("📄 Riga " + index + ": ");
+        for (int i = 0; i < cellCount; i++) {
+            try {
+                String text = cells.nth(i).innerText().trim();
+                if (!text.isEmpty()) {
+                    rowContent.append("[").append(text).append("] ");
+                }
+            } catch (Exception e) {
+                rowContent.append("[Errore lettura cella] ");
+            }
+        }
+        System.out.println(rowContent);
+
         Locator assegnaButton = row.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("assegna"));
         if (assegnaButton.count() > 0) {
             assegnaButton.first().click();
