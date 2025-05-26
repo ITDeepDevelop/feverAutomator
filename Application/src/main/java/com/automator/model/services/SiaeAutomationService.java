@@ -40,24 +40,35 @@ public class SiaeAutomationService {
     }
 
     public boolean assignBordero(String email, String password) {
-        try (Playwright playwright = Playwright.create()) {
-            Browser browser = launchBrowser(playwright);
-            BrowserContext context = browser.newContext();
-            Page page = context.newPage();
+        int maxAttempts = 2;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try (Playwright playwright = Playwright.create()) {
+                System.out.println("▶ Tentativo " + attempt + " di " + maxAttempts);
+                Browser browser = launchBrowser(playwright);
+                BrowserContext context = browser.newContext();
+                Page page = context.newPage();
 
-            loginToSiae(page, email, password);
-            navigateToAssignSection(page);
-            processAllPages(page);
+                loginToSiae(page, email, password);
+                navigateToAssignSection(page);
+                processAllPages(page);
 
-            page.waitForTimeout(3000);
-            page.close();
-            browser.close();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+                page.waitForTimeout(3000);
+                page.close();
+                browser.close();
+                System.out.println("✅ Operazione riuscita al tentativo " + attempt);
+                return true;
+            } catch (Exception e) {
+                System.err.println("❌ Errore al tentativo " + attempt);
+                e.printStackTrace();
+                if (attempt == maxAttempts) {
+                    System.err.println("⛔ Tutti i tentativi falliti.");
+                    return false;
+                }
+            }
         }
+        return false;
     }
+
 
     private Browser launchBrowser(Playwright playwright) {
         return playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
