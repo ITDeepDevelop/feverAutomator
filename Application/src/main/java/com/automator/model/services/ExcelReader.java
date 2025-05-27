@@ -14,9 +14,8 @@ public class ExcelReader {
     private List<Map<String, String>> rows = new ArrayList<>();
     private final DataFormatter formatter = new DataFormatter();
     
-     // Legge il file Excel e carica tutte le righe come lista di mappe.
      
- // Legge il file Excel e carica tutte le righe come lista di mappe.
+    // Legge il file Excel e carica tutte le righe come lista di mappe.
     public void read(File file) throws IOException {
         rows.clear();
 
