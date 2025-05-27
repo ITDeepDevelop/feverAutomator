@@ -87,12 +87,5 @@ public class ExcelReader {
         return rows;
     }
 
-    
-     //Utility privata per convertire una cella in stringa.
-     
-    private String getCellValueAsString(Cell cell) {
-        if (cell == null) return "";
-        return formatter.formatCellValue(cell);
-    }
 
 }
