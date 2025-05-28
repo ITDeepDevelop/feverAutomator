@@ -15,7 +15,7 @@ public class SiaeController {
                 return siaeService.runOperation1();
             case "Operazione 2":
                 return siaeService.runOperation2();
-            case "Operazione 3":
+            case "Assegna Borderò":
                 return siaeService.assignBordero(email,password);
             case "Operazione 4":
                 return siaeService.runOperation4();
