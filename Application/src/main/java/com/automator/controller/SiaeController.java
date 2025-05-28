@@ -15,10 +15,10 @@ public class SiaeController {
                 return siaeService.runOperation1();
             case "Operazione 2":
                 return siaeService.runOperation2();
-            case "Assegna Borderò":
+            case "Assegna Bordero":
                 return siaeService.assignBordero(email,password);
-            case "Operazione 4":
-                return siaeService.runOperation4();
+            case "Riconsegna Bordero":
+                return siaeService.givebackBordero(email,password);
             default:
                 return false;
         }

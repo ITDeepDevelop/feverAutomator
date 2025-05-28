@@ -34,8 +34,33 @@ public class SiaeAutomationService {
         return Math.random() < 0.5;
     }
 
-    public boolean runOperation4() {
-        System.out.println("Esecuzione Operazione 4");
+    public boolean givebackBordero(String email, String password) {
+        int maxAttempts = 2;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try (Playwright playwright = Playwright.create()) {
+                System.out.println("▶ Tentativo " + attempt + " di " + maxAttempts);
+                Browser browser = launchBrowser(playwright);
+                BrowserContext context = browser.newContext();
+                Page page = context.newPage();
+
+                loginToSiaeBorderoPage(page, email, password);
+                navigateToGiveBackSection(page);
+                processAllPagesGiveBack(page);
+
+                page.waitForTimeout(3000);
+                page.close();
+                browser.close();
+                System.out.println("✅ Operazione riuscita al tentativo " + attempt);
+                return true;
+            } catch (Exception e) {
+                System.err.println("❌ Errore al tentativo " + attempt);
+                e.printStackTrace();
+                if (attempt == maxAttempts) {
+                    System.err.println("⛔ Tutti i tentativi falliti.");
+                    return false;
+                }
+            }
+        }
         return false;
     }
 
@@ -48,9 +73,9 @@ public class SiaeAutomationService {
                 BrowserContext context = browser.newContext();
                 Page page = context.newPage();
 
-                loginToSiae(page, email, password);
+                loginToSiaeBorderoPage(page, email, password);
                 navigateToAssignSection(page);
-                processAllPages(page);
+                processAllPagesAssign(page);
 
                 page.waitForTimeout(3000);
                 page.close();
@@ -74,7 +99,7 @@ public class SiaeAutomationService {
         return playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
     }
 
-    private void loginToSiae(Page page, String email, String password) {
+    private void loginToSiaeBorderoPage(Page page, String email, String password) {
         page.navigate("https://www.siae.it/it/");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
@@ -98,7 +123,19 @@ public class SiaeAutomationService {
         option50.click();
     }
 
-    private void processAllPages(Page page) {
+    private void navigateToGiveBackSection(Page page) {
+        page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da riconsegnare")).click();
+        Locator button5 = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5"));
+        button5.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        button5.click();
+        Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
+        option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        option50.click();
+    }
+
+    private void processAllPagesAssign(Page page) {
         Locator menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("1"));
         menu.click();
         page.waitForSelector("ul[role='listbox'] li[role='option']");
@@ -116,7 +153,7 @@ public class SiaeAutomationService {
 
             for (int j = 0; j < rowCount; j++) {
                 try {
-                    processRow(page, rows.nth(j), j+1);
+                    processRowAssign(page, rows.nth(j), j+1);
                     saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
                 } catch (Exception e) {
                     System.err.println("❌ Errore alla pagina " + i + ", riga " + j);
@@ -132,7 +169,7 @@ public class SiaeAutomationService {
         }
     }
 
-    private void processRow(Page page, Locator row, int index) {
+    private void processRowAssign(Page page, Locator row, int index) {
         System.out.println("Record numero " + index +": clic su 'assegna'");
         // Stampa contenuto effettivo della riga
         Locator cells = row.locator("td");
@@ -176,6 +213,92 @@ public class SiaeAutomationService {
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
             // TODO: click su "Conferma"
         }
+    }
+
+    private void processAllPagesGiveBack(Page page) {
+        Locator menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("1"));
+        menu.click();
+        page.waitForSelector("ul[role='listbox'] li[role='option']");
+        Locator options = page.locator("ul[role='listbox'] li[role='option']");
+        int optionCount = options.count();
+        options.nth(0).click();  // remove focus
+
+        for (int i = 0; i < optionCount; i++) {
+            System.out.println("▶ Elaboro pagina: " + (i + 1) + "#################");
+            System.out.println("\n");
+            page.waitForSelector("table tbody tr");
+
+            Locator rows = page.locator("table tbody tr");
+            int rowCount = rows.count();
+
+            for (int j = 0; j < rowCount; j++) {
+                try {
+                    processRowGiveBack(page, rows.nth(j), j+1);
+                    saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
+                } catch (Exception e) {
+                    System.err.println("❌ Errore alla pagina " + i + ", riga " + j);
+                    saveCheckpoint(i, j); // Salva dove si è fermato
+                    throw e; // facoltativo: puoi anche continuare
+                }
+            }
+
+            if(i!=optionCount-1) {
+                page.locator("span[title='Previous Page'] + span button").click();
+                page.waitForTimeout(1000);
+            }
+        }
+    }
+
+    private void processRowGiveBack(Page page, Locator row, int index) {
+        System.out.println("Record numero " + index +": clic su 'assegna'");
+        // Stampa contenuto effettivo della riga
+        Locator cells = row.locator("td");
+        int cellCount = cells.count();
+
+        StringBuilder rowContent = new StringBuilder("📄 Riga " + index + ": ");
+        for (int i = 0; i < cellCount; i++) {
+            try {
+                String text = cells.nth(i).innerText().trim();
+                if (!text.isEmpty()) {
+                    rowContent.append("[").append(text).append("] ");
+                }
+            } catch (Exception e) {
+                rowContent.append("[Errore lettura cella] ");
+            }
+        }
+        System.out.println(rowContent);
+
+        Locator assegnaButton = row.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("visualizza"));
+        if (assegnaButton.count() > 0) {
+            assegnaButton.first().click();
+        }
+
+        // Clic su "Riconsegna a SIAE"
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Riconsegna a SIAE")).click();
+
+        // Verifica se compare il messaggio "Il Programma che stai"
+        Locator warningText = page.getByText("Il Programma che stai");
+
+        if (warningText.isVisible()) {
+            // Clic sul textbox
+            page.getByRole(AriaRole.TEXTBOX).click();
+            // Inserisce testo nel campo
+            page.getByRole(AriaRole.TEXTBOX).fill("Riconsegna automatizzata");
+            // Sostituisce la conferma con "Annulla"
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+            page.waitForTimeout(1000);
+            return;
+        }
+
+        // Seleziona radio "Programma artista principale"
+        page.getByRole(AriaRole.RADIO, new Page.GetByRoleOptions().setName("Programma artista principale")).check();
+
+        //TODO Clic su "Annulla" da sostituire con click su conferma
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+
+        // Clic su "PROGRAMMI MUSICALI"
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+        page.waitForTimeout(1000);
     }
 
     private static final String CHECKPOINT_PATH = "../Checkpoints/checkpoint.properties";
