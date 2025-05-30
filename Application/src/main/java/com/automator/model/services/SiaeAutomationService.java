@@ -33,13 +33,12 @@ public class SiaeAutomationService {
         }
     }
 
-    public boolean runOperation2() {
+    public boolean licenseCheck(String email, String password) {
     	/*
     	 * attualmente, per facilità di test,le credenziali verrano salvate "in chiaro",
     	 * successivamente verrano prese da input nella UI 
     	 * */
-    	String email = "";   
-    	String password = "";     
+    	  
 
     	try (Playwright playwright = Playwright.create()) {
     		
@@ -105,8 +104,10 @@ public class SiaeAutomationService {
             daAccettareTab.click();
             System.out.println("Click eseguito su 'Da Accettare'");
 
-            page.waitForTimeout(5000);
+            page.waitForTimeout(1500);
+            permessiTable(page);
 
+            page.waitForTimeout(5000);
             page.close();
             browser.close();
 
@@ -117,6 +118,65 @@ public class SiaeAutomationService {
         }
     	
     }
+    
+    /*
+     * 30/05/2025 --> manca solo l'implementazione relativa all click su "accetta permesso" ed alla conferma 
+     * 					di accettazione sul modale successivo
+     * 					
+     * */
+    private void permessiTable(Page page) {
+    	// Loop principale per tutte le pagine
+    	boolean hasMorePages = true;
+    	int totalProcessed = 0;
+
+    	while (hasMorePages) {
+    	    // Attendi che la tabella sia visibile
+    	    page.waitForSelector("table.MuiTable-root tbody tr", new Page.WaitForSelectorOptions().setTimeout(10000));
+    	    
+    	    // Conta le righe
+    	    int rowCount = page.locator("table.MuiTable-root tbody tr").count();
+    	    System.out.println("Righe trovate: " + rowCount);
+    	    //qualora non siano presenti righe si chiuderà in automatico la pagina
+    	    if(rowCount == 0) {
+    	    	page.close();
+    	    	System.out.println("Nessuna riga trovata nella tabella I TUOI PERMESSI >>> DA ACCETTARE");
+    	    }
+    	    
+    	    // Processa ogni riga
+    	    for (int i = 0; i < rowCount; i++) {
+    	        System.out.println("Processando riga " + (i + 1));
+    	        
+    	        // Clicca sul pulsante Visualizza della riga corrente
+    	        Locator visualizzaBtn = page.locator("table.MuiTable-root tbody tr").nth(i).locator("button:has-text('Visualizza')");
+    	        visualizzaBtn.click();
+    	        page.waitForTimeout(3000);
+    	        
+    	        // QUI AGGIUNGI LA LOGICA PER LA PAGINA DI DETTAGLIO
+    	        
+    	        // Torna indietro
+    	        page.goBack();
+    	        page.waitForTimeout(2000);
+    	        
+    	        totalProcessed++;
+    	    }
+    	    
+    	    // Controlla se esiste una pagina successiva
+    	    try {
+    	        Locator nextBtn = page.locator("button[aria-label*='next'], button:has-text('Successiva')").first();
+    	        if (nextBtn.count() > 0 && nextBtn.isEnabled()) {
+    	            nextBtn.click();
+    	            page.waitForTimeout(3000);
+    	        } else {
+    	            hasMorePages = false;
+    	        }
+    	    } catch (Exception e) {
+    	        hasMorePages = false;
+    	    }
+    	}
+
+    	System.out.println("Totale permessi processati: " + totalProcessed);
+    }
+    
 
     public boolean givebackBordero(String email, String password) {
         int maxAttempts = 2;

@@ -13,8 +13,8 @@ public class SiaeController {
         switch (operationName) {
             case "Operazione 1":
                 return siaeService.runOperation1();
-            case "Operazione 2":
-                return siaeService.runOperation2();
+            case "Accettazione Permessi":
+                return siaeService.licenseCheck(email,password);
             case "Assegna Bordero":
                 return siaeService.assignBordero(email,password);
             case "Riconsegna Bordero":
