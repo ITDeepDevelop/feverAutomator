@@ -50,11 +50,20 @@ public class ExcelReader {
 
                 for (int i = 0; i < headers.size(); i++) {
                     Cell cell = row.getCell(i);
-                    String value = formatter.formatCellValue(cell).trim();
+                    String value = "";
+                    if (cell != null) {
+                        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                            Date date = cell.getDateCellValue();
+                            value = new java.text.SimpleDateFormat("dd/MM/yyyy").format(date);
+                        } else {
+                            value = formatter.formatCellValue(cell).trim();
+                        }
+                    }
                     if (!value.isEmpty()) {
                         rowData.put(headers.get(i), value);
                     }
                 }
+
 
                 rows.add(rowData);
             }
@@ -78,6 +87,19 @@ public class ExcelReader {
      
     public String getCellValueFromRow(Map<String, String> row, String columnName) {
         return row != null ? row.getOrDefault(columnName, "") : "";
+    }
+    
+    // Trova una riga in base a due colonne e ritorna il valore di una terza colonna
+    public String getValueByTwoKeys(String column1, String value1, String column2, String value2, String targetColumn) {
+        for (Map<String, String> row : rows) {
+            String val1 = row.getOrDefault(column1, "").trim();
+            String val2 = row.getOrDefault(column2, "").trim();
+
+            if (value1.equalsIgnoreCase(val1) && value2.equalsIgnoreCase(val2)) {
+                return row.getOrDefault(targetColumn, "");
+            }
+        }
+        return "";
     }
 
     
