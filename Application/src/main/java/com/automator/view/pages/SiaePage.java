@@ -42,7 +42,7 @@ public class SiaePage extends BorderPane {
 
 
         // Pulsanti delle operazioni (con resultIcon)
-        HBox op1 = createOperationBox("Operazione 1", "#3498db");
+        HBox op1 = createOperationBox("Richiesta permesso per un evento", "#3498db");
         HBox op2 = createOperationBox("Operazione 2", "#2ecc71");
         HBox op3 = createOperationBox("Assegna Bordero", "#e67e22");
         HBox op4 = createOperationBox("Riconsegna Bordero", "#9b59b6");

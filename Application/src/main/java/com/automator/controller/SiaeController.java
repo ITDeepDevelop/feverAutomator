@@ -11,7 +11,7 @@ public class SiaeController {
 
     public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
-            case "Operazione 1":
+            case "Richiesta permesso per un evento":
                 return siaeService.runOperation1();
             case "Operazione 2":
                 return siaeService.runOperation2();
