@@ -175,6 +175,10 @@ public class SiaeAutomationService {
         Locator cells = row.locator("td");
         int cellCount = cells.count();
 
+        // Recupera Data e Locale/Spazio
+        String data = cells.nth(1).innerText().trim();
+        String localeSpazio = cells.nth(3).innerText().trim();
+
         StringBuilder rowContent = new StringBuilder("📄 Riga " + index + ": ");
         for (int i = 0; i < cellCount; i++) {
             try {
@@ -194,7 +198,9 @@ public class SiaeAutomationService {
         }
 
         page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
-        page.getByRole(AriaRole.TEXTBOX).fill("rodella.et@gmail.com"); // ← da DB in futuro
+        System.out.println(data);
+        System.out.println(localeSpazio);
+        page.getByRole(AriaRole.TEXTBOX).fill("rodella.et@gmail.com"); // ← USARE METODO DI THOMAS
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
         page.waitForTimeout(1000);
 
