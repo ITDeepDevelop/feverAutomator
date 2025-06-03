@@ -169,7 +169,7 @@ public class SiaeAutomationService {
         }
     }
 
-    private void processRowAssign(Page page, Locator row, int index) {
+    private void processRowAssign(Page page, Locator row, int index){
         System.out.println("Record numero " + index +": clic su 'assegna'");
         // Stampa contenuto effettivo della riga
         Locator cells = row.locator("td");
@@ -200,7 +200,15 @@ public class SiaeAutomationService {
         page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
         System.out.println(data);
         System.out.println(localeSpazio);
-        page.getByRole(AriaRole.TEXTBOX).fill("rodella.et@gmail.com"); // ← USARE METODO DI THOMAS
+        try {
+            ExcelReader reader = new ExcelReader();
+            reader.read(ExcelStorage.getInstance().getFile());
+            String emailToFill = reader.getValueByTwoKeys("Data evento",data, "Nome location",localeSpazio,"E-mail");
+            page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
+            //page.waitForTimeout(10000);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
         page.waitForTimeout(1000);
 
