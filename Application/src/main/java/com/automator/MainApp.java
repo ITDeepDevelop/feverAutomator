@@ -51,7 +51,7 @@ public class MainApp extends Application {
         tabPane.getTabs().addAll(siaeTab, leaTab, excelTab);
         root.setCenter(tabPane);
 
-        Scene scene = new Scene(root, 1000, 800);
+        Scene scene = new Scene(root, 1600, 800);
         
         // Stili CSS aggiornati
         String css = ".tab-pane .tab-header-area .tab-header-background {\n" +
