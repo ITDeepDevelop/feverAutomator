@@ -107,7 +107,6 @@ public class ExcelPage extends BorderPane {
         if (file != null) {
             currentFile = file;
             fileNameLabel.setText("File selezionato: " + file.getName());
-     //       fileNameLabel.setText(file.getName());
             ExcelStorage.getInstance().setFile(file);
             excelTableView.loadExcelFile(file);
         }
