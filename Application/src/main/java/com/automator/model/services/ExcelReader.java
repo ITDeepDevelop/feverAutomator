@@ -79,6 +79,7 @@ public class ExcelReader {
                 return row;
             }
         }
+        System.out.println("Nessuna riga trovata per: colonna = " + columnName + ", valore = " + value);
         return null; 
     }
 
@@ -99,6 +100,7 @@ public class ExcelReader {
                 return row.getOrDefault(targetColumn, "");
             }
         }
+        System.out.println("Nessuna riga trovata per: " + column1 + " = " + value1 + " e " + column2 + " = " + value2);
         return "";
     }
 
