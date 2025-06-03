@@ -5,7 +5,7 @@ import com.automator.model.services.LeaAutomationService;
 public class LeaController {
     private final LeaAutomationService leaService = new LeaAutomationService();
 
-    public boolean handleOperation(String operationName) {
+    public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
             case "Op1": return leaService.op1();
             case "Op2": return leaService.op2();
