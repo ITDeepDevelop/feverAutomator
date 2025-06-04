@@ -646,7 +646,7 @@ public class SiaeAutomationService {
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
     }
 
-    private static final String CHECKPOINT_PATH = "../Checkpoints/checkpoint.properties";
+    private static final String CHECKPOINT_PATH = "../../Checkpoints/checkpoint.properties";
 
     private void saveCheckpoint(int page, int row) {
         try {
