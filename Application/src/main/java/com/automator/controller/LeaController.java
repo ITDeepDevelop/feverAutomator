@@ -8,9 +8,7 @@ public class LeaController {
     public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
             case "Op1": return leaService.op1();
-            case "Op2": return leaService.op2();
-            case "Op3": return leaService.op3();
-            case "Op4": return leaService.op4();
+            case "Download Licenza": return leaService.downloadLicense();
             default: {
                 System.out.println("Invalid operation name: " + operationName);
                 return false;

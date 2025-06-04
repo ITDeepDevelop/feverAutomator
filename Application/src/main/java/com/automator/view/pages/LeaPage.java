@@ -145,12 +145,10 @@ public class LeaPage extends BorderPane {
         operationsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         
         HBox op1 = createOperationBox("Operazione 1", "#3498db", "Operazione di test");
-        HBox op2 = createOperationBox("Accettazione Permessi", "#27ae60", "LOREM IPSUM");
-        HBox op3 = createOperationBox("Assegna Bordero", "#e67e22", "LOREM IPSUM");
-        HBox op4 = createOperationBox("Riconsegna Bordero", "#9b59b6", "LOREM IPSUM");
+        HBox op2 = createOperationBox("Download Licenza", "#27ae60", "Scarica il PDF di una licenza");
 
         VBox operationsBox = new VBox(15);
-        operationsBox.getChildren().addAll(operationsTitle, op1, op2, op3, op4);
+        operationsBox.getChildren().addAll(operationsTitle, op1, op2);
         operationsBox.setPadding(new Insets(20));
         operationsBox.setStyle("-fx-background-color: white; -fx-background-radius: 8; " +
                               "-fx-border-color: #e9ecef; -fx-border-radius: 8; " +
@@ -215,14 +213,8 @@ public class LeaPage extends BorderPane {
             case "Operazione 1":
                 actionButton.setOnAction(e -> executeOperation1(statusIcon));
                 break;
-            case "Operazione 2":
+            case "Download Licenza":
                 actionButton.setOnAction(e -> executeOperation2(statusIcon));
-                break;
-            case "Operazione 3":
-                actionButton.setOnAction(e -> executeOperation3(statusIcon));
-                break;
-            case "Operazione 4":
-                actionButton.setOnAction(e -> executeOperation4(statusIcon));
                 break;
         }
 
@@ -277,29 +269,7 @@ public class LeaPage extends BorderPane {
         String password = passwordField.getText();
         
         // Esegui operazione 2 (Accettazione Permessi)
-        boolean success = leaController.handleOperation("Op2", email, password);
-        updateStatusIcon(statusIcon, success ? "success" : "error");
-    }
-
-    private void executeOperation3(Circle statusIcon) {
-        updateStatusIcon(statusIcon, "running");
-        // Prendi le credenziali dai campi
-        String email = emailField.getText();
-        String password = passwordField.getText();
-        
-        // Esegui operazione 3 (Assegna Bordero)
-        boolean success = leaController.handleOperation("Op3", email, password);
-        updateStatusIcon(statusIcon, success ? "success" : "error");
-    }
-
-    private void executeOperation4(Circle statusIcon) {
-        updateStatusIcon(statusIcon, "running");
-        // Prendi le credenziali dai campi
-        String email = emailField.getText();
-        String password = passwordField.getText();
-        
-        // Esegui operazione 4 (Riconsegna Bordero)
-        boolean success = leaController.handleOperation("Op4", email, password);
+        boolean success = leaController.handleOperation("Download Licenza", email, password);
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
