@@ -6,6 +6,10 @@ import java.nio.file.Files;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.WaitForSelectorState;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 public class LeaAutomationService {
 
@@ -32,7 +36,7 @@ public class LeaAutomationService {
         }
     }
 
-    public boolean downloadLicense() {
+    public boolean downloadLicense( String email, String password) {
         int maxAttempts = 2;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try (Playwright playwright = Playwright.create()) {
@@ -60,10 +64,10 @@ public class LeaAutomationService {
 
                 // 6. Inserisci username e password
                 page.locator("#username").click();
-                page.locator("#username").fill("anne.schmitz@feverup.com");
+                page.locator("#username").fill(email);
 
                 page.locator("#password").click();
-                page.locator("#password").fill("kzemositaly2024!");
+                page.locator("#password").fill(password);
 
                 // 7. Clicca sul pulsante "Accedi" <-- getByRole su Page, uso Page.GetByRoleOptions
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
@@ -83,29 +87,71 @@ public class LeaAutomationService {
                 // 9. Naviga esplicitamente all’URL delle licenze
                 page.navigate("https://licence.soundreef.com/it/licenses");
 
-                // 10. Clicca sul titolo specifico di una licenza
-                page.getByText("Candlelight: tributo a Pino Daniele ed altri @Chiesa di San Giorgio h 20:")
-                        .click();
+                //TODO: Search DB di THOMAS che restituisce lista di righe di interesse
+                String[] toDownload = {
+                        "Candlelight: tributo a Pino Daniele ed altri",
+                        "Candlelight: Tributo ai Coldplay",
+                        "Candlelight: I Classici del Rock",
+                };
 
-                // 11. Intercetta il download e clicca su "Scarica licenza"
-                Download download = page.waitForDownload(() -> {
-                    // getByRole su Page per il link di download
-                    page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Scarica licenza"))
-                            .click();
-                });
+                for (String event : toDownload) {
+                    System.out.println("Scarico il PDF: " + event);
+                    page.navigate("https://licence.soundreef.com/it/licenses");
+                    page.waitForTimeout(1000);
 
-                // 12. Salva il file scaricato nella cartella "LeaDownloads" sul Desktop dell’utente
-                String userHome = System.getProperty("user.home");
-                Path desktopDownloads = Paths.get(userHome, "Desktop", "LeaDownloads");
-                // Creazione della cartella se non esiste
-                Files.createDirectories(desktopDownloads);
-                Path targetPath = desktopDownloads.resolve(download.suggestedFilename());
-                download.saveAs(targetPath);
-                System.out.println("File salvato in: " + targetPath.toAbsolutePath());
+                    // 10. Trova titolo parziale di una licenza
+                    Locator matches = page.getByText(
+                            event,
+                            new Page.GetByTextOptions().setExact(false)
+                    );
 
+                    int count = matches.count();
+                    if (count == 0) {
+                        System.out.println("Nessun elemento trovato per: " + event);
+                        continue;
+                    }
 
-                // 13. Torna alla pagina delle licenze (opzionale)
-                page.navigate("https://licence.soundreef.com/it/licenses");
+                    System.out.println("Trovati " + count + " elementi per: " + event);
+
+                    for (int i = 0; i < count; i++) {
+                        page.navigate("https://licence.soundreef.com/it/licenses");
+                        Locator single = matches.nth(i);
+                        // stampa il testo esatto che stiamo per cliccare (opzionale, per debug)
+                        System.out.println("  → Clicco su: " + single.innerText());
+
+                        // clicca l’i‐esimo elemento
+                        single.click();
+
+                        Locator dateLocator = page.locator("#license_start_date");
+                        dateLocator.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED));
+                        // Leggi l’attributo “value”
+                        String dateValue = dateLocator.getAttribute("value");
+
+                        //TODO inserire input year e month
+                        int year = 2025;
+                        int month = 5;
+
+                        boolean rightTime = matchesYearMonth(dateValue, year, month);
+                        if (rightTime) {
+                            // 11. Intercetta il download e clicca su "Scarica licenza"
+                            Download download = page.waitForDownload(() -> {
+                                // getByRole su Page per il link di download
+                                page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Scarica licenza"))
+                                        .click();
+                            });
+                            // 12. Salva il file scaricato nella cartella "LeaDownloads" sul Desktop dell’utente
+                            String userHome = System.getProperty("user.home");
+                            Path desktopDownloads = Paths.get(userHome, "Desktop", "LeaDownloads");
+                            // Creazione della cartella se non esiste
+                            Files.createDirectories(desktopDownloads);
+                            Path targetPath = desktopDownloads.resolve(download.suggestedFilename());
+                            download.saveAs(targetPath);
+                            System.out.println("File salvato in: " + targetPath.toAbsolutePath());
+
+                        }
+                        else break; //sono in ordine cronologico, la prima riga con data non valida sarà seguita da sole righe con data non valida
+                    }
+                }
 
                 // 14. Chiudi contesto e browser
                 context.close();
@@ -124,5 +170,18 @@ public class LeaAutomationService {
             }
         }
         return false;
+    }
+
+    public boolean matchesYearMonth(String value, int expectedYear, int expectedMonth) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            LocalDate date = LocalDate.parse(value); // il parser si aspetta "YYYY-MM-DD"
+            return date.getYear() == expectedYear && date.getMonthValue() == expectedMonth;
+        } catch (DateTimeParseException e) {
+            // Se il formato non è "yyyy-MM-dd", restituiamo false
+            return false;
+        }
     }
 }
