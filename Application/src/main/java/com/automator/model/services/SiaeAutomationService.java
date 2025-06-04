@@ -465,7 +465,7 @@ public class SiaeAutomationService {
                     processRowAssign(page, rows.nth(j), j+1);
                     saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
                 } catch (Exception e) {
-                    System.err.println("❌ Errore alla pagina " + i + ", riga " + j);
+                    System.err.println("❌ Errore alla pagina " + (i+1) + ", riga " + (j+1));
                     saveCheckpoint(i, j); // Salva dove si è fermato
                     throw e; // facoltativo: puoi anche continuare
                 }
@@ -559,7 +559,7 @@ public class SiaeAutomationService {
                     processRowGiveBack(page, rows.nth(j), j+1);
                     saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
                 } catch (Exception e) {
-                    System.err.println("❌ Errore alla pagina " + i + ", riga " + j);
+                    System.err.println("❌ Errore alla pagina " + (i+1) + ", riga " + (j+1));
                     saveCheckpoint(i, j); // Salva dove si è fermato
                     throw e; // facoltativo: puoi anche continuare
                 }
@@ -596,13 +596,32 @@ public class SiaeAutomationService {
             assegnaButton.first().click();
         }
 
+        Locator noPageLocator = page.getByText("Si è verificato un errore",
+                new Page.GetByTextOptions().setExact(false));
+
+        // Aspetta fino a 2 secondi che l'elemento compaia (se non compare, count() rimane 0)
+        try {
+            noPageLocator.waitFor(new Locator.WaitForOptions().setTimeout(2000));
+        } catch (PlaywrightException e) {
+            System.out.println("timeout: l'elemento non è stato trovato entro 2 secondi");
+        }
+
+        if (noPageLocator.count() > 0) {
+            System.out.println("Elemento ‘Si è verificato un errore’ trovato");
+            page.goBack();
+            page.waitForTimeout(1000);
+            return;
+        }
+
         // Clic su "Riconsegna a SIAE"
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Riconsegna a SIAE")).click();
+
 
         // Verifica se compare il messaggio "Il Programma che stai"
         Locator warningText = page.getByText("Il Programma che stai");
 
         if (warningText.isVisible()) {
+            System.out.println("Caso Warning Verificato trovato");
             // Clic sul textbox
             page.getByRole(AriaRole.TEXTBOX).click();
             // Inserisce testo nel campo
@@ -610,18 +629,21 @@ public class SiaeAutomationService {
             // Sostituisce la conferma con "Annulla"
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
             page.waitForTimeout(1000);
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
             return;
         }
 
         // Seleziona radio "Programma artista principale"
-        page.getByRole(AriaRole.RADIO, new Page.GetByRoleOptions().setName("Programma artista principale")).check();
+        Locator radio = page.getByRole(AriaRole.RADIO, new Page.GetByRoleOptions().setName("Programma artista principale"));
+        if (radio.count() > 0) {
+            radio.check();
+        }
 
         //TODO Clic su "Annulla" da sostituire con click su conferma
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
 
         // Clic su "PROGRAMMI MUSICALI"
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
-        page.waitForTimeout(1000);
     }
 
     private static final String CHECKPOINT_PATH = "../Checkpoints/checkpoint.properties";
