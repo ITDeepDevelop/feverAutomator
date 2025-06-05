@@ -1,5 +1,6 @@
 package com.automator.model.services;
 
+import com.automator.view.components.ExcelTableView;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
 
@@ -9,113 +10,167 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.io.*;
+import javafx.collections.ObservableList;
 
 public class SiaeAutomationService {
+	
+	
+	 public boolean runOperation1() {
+	        Playwright playwright = Playwright.create();
+	            Browser browser = launchBrowser(playwright);
+	            BrowserContext context = browser.newContext();
+	            Page page = context.newPage();
 
-    public boolean runOperation1() {
-        Playwright playwright = Playwright.create();
-            Browser browser = launchBrowser(playwright);
-            BrowserContext context = browser.newContext();
-            Page page = context.newPage();
+	      
+	                page.navigate("https://www.siae.it/it/");
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
+	                page.locator("input[type=\"text\"]").fill("originals_italy@feverup.com");
+	                page.locator("input[type=\"password\"]").fill("Siae@123");
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
+	               
+	           
+	            
+	                // 2 "Portale Organizzatori Professionali > Accedi"
+	                page.locator("#PORTUP_STD")
+	                        .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
+	                        .click();
+	             // 3. Nuovo permesso
+	                page.waitForSelector("text=Nuovo Permesso");
+	                page.getByText("Nuovo Permesso").click();
+	                
 
-      
-                page.navigate("https://www.siae.it/it/");
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
-                page.locator("input[type=\"text\"]").fill("originals_italy@feverup.com");
-                page.locator("input[type=\"password\"]").fill("Siae@123");
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
-               
-           
-            
-                // 2 "Portale Organizzatori Professionali > Accedi"
-                page.locator("#PORTUP_STD")
-                        .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
-                        .click();
-             // 3. Nuovo permesso
-                page.waitForSelector("text=Nuovo Permesso");
-                page.getByText("Nuovo Permesso").click();
-                
+	            // 4. Inserimento dati statici (poi da Excel)
+	             // Inserisci città
+	                page.locator("input[placeholder='Città']").click();
+	                page.locator("input[placeholder='Città']").fill("BERGAMO");
+	                page.waitForSelector("ul[role='listbox'] >> text=BERGAMO");
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
 
-            // 4. Inserimento dati statici (poi da Excel)
-             // Inserisci città
-                page.locator("input[placeholder='Città']").click();
-                page.locator("input[placeholder='Città']").fill("BERGAMO");
-                page.waitForSelector("ul[role='listbox'] >> text=BERGAMO");
-                page.keyboard().press("ArrowDown");
-                page.keyboard().press("Enter");
+	                // Inserisci locale
+	                page.locator("input[placeholder='Locale / Indirizzo']").click();
+	                page.locator("input[placeholder='Locale / Indirizzo']").fill("CENTRO CONGRESSI GIOVANNI");
+	                page.waitForSelector("ul[role='listbox'] >> text=CENTRO CONGRESSI");
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
+	                
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	                
+	             // 5 Seleziona Categoria Evento
+	     
+	                
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(0).click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('CONCERTI, MANIFESTAZIONI MUSICALI')").click();
 
-                // Inserisci locale
-                page.locator("input[placeholder='Locale / Indirizzo']").click();
-                page.locator("input[placeholder='Locale / Indirizzo']").fill("CENTRO CONGRESSI GIOVANNI");
-                page.waitForSelector("ul[role='listbox'] >> text=CENTRO CONGRESSI");
-                page.keyboard().press("ArrowDown");
-                page.keyboard().press("Enter");
-                
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-                
-                
-             // 5 Seleziona Categoria Evento
-     
-                
-                page.locator("div[role='button']:not(.Mui-disabled)").nth(0).click();
-                page.waitForSelector("ul[role='listbox']");
-                page.locator("li:has-text('CONCERTI, MANIFESTAZIONI MUSICALI')").click();
+	                
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click(); // seconda tendina
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('CONCERTO LEGGERA')").click();
 
-                
-                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click(); // seconda tendina
-                page.waitForSelector("ul[role='listbox']");
-                page.locator("li:has-text('CONCERTO LEGGERA')").click();
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	             // 6 Data evento   
+	                
+	                try {
+	                    // Apri il calendario
+	                    page.locator("input[readonly]").click();
+	                    
+	                    // Aspetta che appaia il calendario
+	                    page.waitForSelector(".DayPicker", new Page.WaitForSelectorOptions().setTimeout(3000));
+	                    
+	                    navigateToTargetMonth(page, "Giugno", 2025);
+	                    
+	                    selectDay(page, 25);
+	                    
+	                    System.out.println("✅ Data selezionata con successo");
+	                    
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
+	                    e.printStackTrace();
+	                }
+	                
+	             // Inserisci l'orario di inizio
+	                page.locator("input[placeholder='hh:mm']").nth(0).click();
+	                page.locator("input[placeholder='hh:mm']").nth(0).fill("21:00");
 
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-                
-             // 6 Data evento   
-                
-                try {
-                    // Apri il calendario
-                    page.locator("input[readonly]").click();
-                    
-                    // Aspetta che appaia il calendario
-                    page.waitForSelector(".DayPicker", new Page.WaitForSelectorOptions().setTimeout(3000));
-                    
-                    navigateToTargetMonth(page, "Maggio", 2025);
-                    
-                    selectDay(page, 31);
-                    
-                    System.out.println("✅ Data selezionata con successo");
-                    
-                } catch (Exception e) {
-                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
-                    e.printStackTrace();
-                }
-                
-             // Inserisci l'orario di inizio
-                page.locator("input[placeholder='hh:mm']").nth(0).click();
-                page.locator("input[placeholder='hh:mm']").nth(0).fill("21:00");
+	                // Inserisci l'orario di fine
+	                page.locator("input[placeholder='hh:mm']").nth(1).click();
+	                page.locator("input[placeholder='hh:mm']").nth(1).fill("23:00");
 
-                // Inserisci l'orario di fine
-                page.locator("input[placeholder='hh:mm']").nth(1).click();
-                page.locator("input[placeholder='hh:mm']").nth(1).fill("23:00");
+	                // Seleziona modalità di ingresso (dropdown)
+	                page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('Ingresso a pagamento')").click();
+	 
+	                
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	             // 7 Descrizione 
+	                page.locator("input[name='furtherInfo']").fill("Candlelight Spring: Coldplay vs Imagine Dragons - Giovanni XXIII");
+	               
+	                Locator dropdown = page.locator("div#outlined-select");
+	                dropdown.click(new Locator.ClickOptions().setForce(true));
 
-                // Seleziona modalità di ingresso (dropdown)
-                page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").click();
-                page.waitForSelector("ul[role='listbox']");
-                page.locator("li:has-text('Ingresso a pagamento')").click();
- 
-                
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-                page.pause();
+	                // 2. Aspetta che la lista sia visibile
+	             page.waitForSelector("ul[role='listbox']");
+	             
+	             	// 3. Clicca sulla voce corretta del menu
+	             page.locator("li:has-text('Tutti i brani non tutelati o di pubblico dominio')").click();
 
-            page.close();
-            browser.close();
-            return true;
-        /*} catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }*/
-    }
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                page.pause();
+
+	            page.close();
+	            browser.close();
+	            return true;
+	      
+	    }
+
+/*
+    public List<EventoSiaeRow> estraiEventiDaExcel(ExcelTableView excelView) {
+        List<EventoSiaeRow> eventi = new ArrayList<>();
+        ObservableList<ObservableList<String>> righe = excelView.getTable().getItems();
+
+
+        for (ObservableList<String> riga : righe) {
+            // Stampa per debug
+            System.out.println("🔍 Riga Excel: " + riga);
+
+            // Verifica che la riga abbia abbastanza colonne
+            if (riga.size() < 10) {
+                System.err.println("⚠ Riga ignorata (colonne insufficienti): " + riga.size());
+                continue;
+            }
+
+            EventoSiaeRow evento = new EventoSiaeRow(
+            	    riga.get(0), // city
+            	    riga.get(1), // address
+            	    riga.get(2), // category
+            	    riga.get(3), // subCategory
+            	    riga.get(4), // date
+            	    riga.get(5), // timeFrom
+            	    riga.get(6), // timeTo
+            	    riga.get(7), // ticketType
+            	    riga.get(8), // description
+            	    riga.get(9)  // musicType
+            	);
+
+            eventi.add(evento);
+        }
+
+        return eventi;
+    }*/
 
     public boolean runOperation2() {
         System.out.println("Esecuzione Operazione 2");
