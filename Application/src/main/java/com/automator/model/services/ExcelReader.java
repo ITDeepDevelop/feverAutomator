@@ -50,11 +50,20 @@ public class ExcelReader {
 
                 for (int i = 0; i < headers.size(); i++) {
                     Cell cell = row.getCell(i);
-                    String value = formatter.formatCellValue(cell).trim();
+                    String value = "";
+                    if (cell != null) {
+                        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                            Date date = cell.getDateCellValue();
+                            value = new java.text.SimpleDateFormat("dd/MM/yyyy").format(date);
+                        } else {
+                            value = formatter.formatCellValue(cell).trim();
+                        }
+                    }
                     if (!value.isEmpty()) {
                         rowData.put(headers.get(i), value);
                     }
                 }
+
 
                 rows.add(rowData);
             }
@@ -70,6 +79,7 @@ public class ExcelReader {
                 return row;
             }
         }
+        System.out.println("Nessuna riga trovata per: colonna = " + columnName + ", valore = " + value);
         return null; 
     }
 
@@ -79,12 +89,77 @@ public class ExcelReader {
     public String getCellValueFromRow(Map<String, String> row, String columnName) {
         return row != null ? row.getOrDefault(columnName, "") : "";
     }
+    
+    // Trova una riga in base a due colonne e ritorna il valore di una terza colonna
+    public String getValueByTwoKeys(String column1, String value1, String column2, String value2, String targetColumn) {
+        for (Map<String, String> row : rows) {
+            String val1 = row.getOrDefault(column1, "").trim();
+            String val2 = row.getOrDefault(column2, "").trim();
+
+            if (value1.equalsIgnoreCase(val1) && value2.equalsIgnoreCase(val2)) {
+                return row.getOrDefault(targetColumn, "");
+            }
+        }
+        System.out.println("Nessuna riga trovata per: " + column1 + " = " + value1 + " e " + column2 + " = " + value2);
+        return "";
+    }
 
     
      //Ritorna tutte le righe lette .
      
     public List<Map<String, String>> getAllRows() {
         return rows;
+    }
+    
+    public List<EventoRow> getEventoRows() {
+        List<EventoRow> eventi = new ArrayList<>();
+        for (Map<String, String> row : rows) {
+            EventoRow evento = new EventoRow();
+            evento.setNomeEventoELocation(row.getOrDefault("Nome evento + Location", ""));
+            evento.setCodiceSpettacoloGenere(row.getOrDefault("Cod. spettacolo - genere manifestazione", ""));
+            evento.setDataEvento(row.getOrDefault("Data evento", ""));
+            evento.setSessioni(row.getOrDefault("Sessioni", ""));
+            evento.setNomeLocation(row.getOrDefault("Nome location", ""));
+            evento.setIndirizzo(row.getOrDefault("Indirizzo", ""));
+            evento.setCitta(row.getOrDefault("Città", ""));
+            evento.setCap(row.getOrDefault("Cap", ""));
+            evento.setCapienza(row.getOrDefault("Capienza", ""));
+            evento.setEmail(row.getOrDefault("E-mail", ""));
+            eventi.add(evento);
+        }
+        return eventi;
+    }
+    
+    // metodo che restituisce un array di EventoRow dove è presente la coppia (location,città)
+    public List<EventoRow> getEventiByLocationECitta(String location, String citta) {
+        List<EventoRow> tuttiGliEventi = getEventoRows();
+        List<EventoRow> filtrati = new ArrayList<>();
+
+        for (EventoRow evento : tuttiGliEventi) {
+            if (location.equalsIgnoreCase(evento.getNomeLocation().trim()) &&
+                citta.equalsIgnoreCase(evento.getCitta().trim())) {
+                filtrati.add(evento);
+            }
+        }
+
+        return filtrati;
+    }
+    
+    public List<EventoRow> getEventiByCittaLocationEGenere(String citta, String nomeLocation, String genereManifestazione) {
+        List<EventoRow> tuttiGliEventi = getEventoRows();
+        List<EventoRow> filtrati = new ArrayList<>();
+
+        for (EventoRow evento : tuttiGliEventi) {
+            boolean matchCitta = citta.equalsIgnoreCase(evento.getCitta().trim());
+            boolean matchLocation = nomeLocation.equalsIgnoreCase(evento.getNomeLocation().trim());
+            boolean matchGenere = genereManifestazione.equalsIgnoreCase(evento.getCodiceSpettacoloGenere().trim());
+
+            if (matchCitta && matchLocation && matchGenere) {
+                filtrati.add(evento);
+            }
+        }
+
+        return filtrati;
     }
 
 

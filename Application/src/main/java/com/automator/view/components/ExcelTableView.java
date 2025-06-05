@@ -131,7 +131,7 @@ public class ExcelTableView extends VBox {
         }
     }
 
-    private String getCellValueAsString(Cell cell) {
+    private String getCellValueAsString(Cell cell) { 
         if (cell == null) return "";
         
         switch (cell.getCellType()) {

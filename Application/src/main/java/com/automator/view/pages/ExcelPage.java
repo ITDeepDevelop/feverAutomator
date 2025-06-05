@@ -4,6 +4,7 @@ package com.automator.view.pages;
 
 import java.io.File;
 
+import com.automator.model.services.ExcelStorage;
 import com.automator.view.components.ExcelTableView;
 
 import javafx.geometry.Insets;
@@ -24,41 +25,73 @@ public class ExcelPage extends BorderPane {
     public ExcelPage() {
         // Header
         Label headerLabel = new Label("Gestione File Excel");
-        headerLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        headerLabel.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
         VBox header = new VBox(headerLabel);
-        header.setPadding(new Insets(20));
-        header.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 5;");
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(25, 0, 25, 0));
+        header.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-border-width: 0 0 1 0;");
         this.setTop(header);
 
-        // Area centrale con la tabella Excel
+        // Tabella centrale
         excelTableView = new ExcelTableView();
         this.setCenter(excelTableView);
 
-        // Area inferiore con i pulsanti
-        VBox bottomBox = new VBox(10);
-        bottomBox.setAlignment(Pos.CENTER);
-        bottomBox.setPadding(new Insets(20));
-        bottomBox.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 5;");
+        // Footer
+        VBox footer = new VBox(15);
+        footer.setAlignment(Pos.CENTER);
+        footer.setPadding(new Insets(20));
+        footer.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-border-width: 1 0 0 0;");
 
-        // Label per il nome del file
         fileNameLabel = new Label("Nessun file selezionato");
-        fileNameLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #2c3e50;");
+        fileNameLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d;");
 
         // Pulsanti
-        HBox buttonBox = new HBox(10);
+        HBox buttonBox = new HBox(15);
         buttonBox.setAlignment(Pos.CENTER);
 
         Button loadButton = new Button("Carica File Excel");
-        loadButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 5;");
+        stylePrimaryButton(loadButton);
         loadButton.setOnAction(e -> loadExcelFile());
 
         Button clearButton = new Button("Elimina File");
-        clearButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 5;");
+        styleDangerButton(clearButton);
         clearButton.setOnAction(e -> clearTable());
 
         buttonBox.getChildren().addAll(loadButton, clearButton);
-        bottomBox.getChildren().addAll(fileNameLabel, buttonBox);
-        this.setBottom(bottomBox);
+        footer.getChildren().addAll(fileNameLabel, buttonBox);
+
+        this.setBottom(footer);
+    }
+
+    private void stylePrimaryButton(Button button) {
+        button.setStyle(
+            "-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+            "-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+            "-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        ));
+    }
+
+    private void styleDangerButton(Button button) {
+        button.setStyle(
+            "-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+            "-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+            "-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" +
+            "-fx-padding: 10 20; -fx-background-radius: 8;"
+        ));
     }
 
     private void loadExcelFile() {
@@ -70,10 +103,11 @@ public class ExcelPage extends BorderPane {
 
         Stage stage = (Stage) this.getScene().getWindow();
         File file = fileChooser.showOpenDialog(stage);
-        
+
         if (file != null) {
             currentFile = file;
-            fileNameLabel.setText(file.getName());
+            fileNameLabel.setText("File selezionato: " + file.getName());
+            ExcelStorage.getInstance().setFile(file);
             excelTableView.loadExcelFile(file);
         }
     }
@@ -83,4 +117,4 @@ public class ExcelPage extends BorderPane {
         currentFile = null;
         fileNameLabel.setText("Nessun file selezionato");
     }
-} 
+}
