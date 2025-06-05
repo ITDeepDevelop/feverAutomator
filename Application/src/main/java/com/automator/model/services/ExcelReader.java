@@ -110,6 +110,57 @@ public class ExcelReader {
     public List<Map<String, String>> getAllRows() {
         return rows;
     }
+    
+    public List<EventoRow> getEventoRows() {
+        List<EventoRow> eventi = new ArrayList<>();
+        for (Map<String, String> row : rows) {
+            EventoRow evento = new EventoRow();
+            evento.setNomeEventoELocation(row.getOrDefault("Nome evento + Location", ""));
+            evento.setCodiceSpettacoloGenere(row.getOrDefault("Cod. spettacolo - genere manifestazione", ""));
+            evento.setDataEvento(row.getOrDefault("Data evento", ""));
+            evento.setSessioni(row.getOrDefault("Sessioni", ""));
+            evento.setNomeLocation(row.getOrDefault("Nome location", ""));
+            evento.setIndirizzo(row.getOrDefault("Indirizzo", ""));
+            evento.setCitta(row.getOrDefault("Città", ""));
+            evento.setCap(row.getOrDefault("Cap", ""));
+            evento.setCapienza(row.getOrDefault("Capienza", ""));
+            evento.setEmail(row.getOrDefault("E-mail", ""));
+            eventi.add(evento);
+        }
+        return eventi;
+    }
+    
+    // metodo che restituisce un array di EventoRow dove è presente la coppia (location,città)
+    public List<EventoRow> getEventiByLocationECitta(String location, String citta) {
+        List<EventoRow> tuttiGliEventi = getEventoRows();
+        List<EventoRow> filtrati = new ArrayList<>();
+
+        for (EventoRow evento : tuttiGliEventi) {
+            if (location.equalsIgnoreCase(evento.getNomeLocation().trim()) &&
+                citta.equalsIgnoreCase(evento.getCitta().trim())) {
+                filtrati.add(evento);
+            }
+        }
+
+        return filtrati;
+    }
+    
+    public List<EventoRow> getEventiByCittaLocationEGenere(String citta, String nomeLocation, String genereManifestazione) {
+        List<EventoRow> tuttiGliEventi = getEventoRows();
+        List<EventoRow> filtrati = new ArrayList<>();
+
+        for (EventoRow evento : tuttiGliEventi) {
+            boolean matchCitta = citta.equalsIgnoreCase(evento.getCitta().trim());
+            boolean matchLocation = nomeLocation.equalsIgnoreCase(evento.getNomeLocation().trim());
+            boolean matchGenere = genereManifestazione.equalsIgnoreCase(evento.getCodiceSpettacoloGenere().trim());
+
+            if (matchCitta && matchLocation && matchGenere) {
+                filtrati.add(evento);
+            }
+        }
+
+        return filtrati;
+    }
 
 
 }
