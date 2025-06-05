@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data // Genera getter, setter 
+@Data // Genera getter, setter
 @NoArgsConstructor // Costruttore vuoto
 @AllArgsConstructor // Costruttore con tutti i campi
 public class EventoRow {
