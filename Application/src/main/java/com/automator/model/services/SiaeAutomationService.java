@@ -1,38 +1,184 @@
 package com.automator.model.services;
 
+import com.automator.view.components.ExcelTableView;
 import com.microsoft.playwright.*;
 
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 import com.microsoft.playwright.options.AriaRole;
+
+
+import com.microsoft.playwright.options.SelectOption;
+
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.io.*;
+import javafx.collections.ObservableList;
 
 
 public class SiaeAutomationService {
+	
+	
+	 public boolean runOperation1() {
+	        Playwright playwright = Playwright.create();
+	            Browser browser = launchBrowser(playwright);
+	            BrowserContext context = browser.newContext();
+	            Page page = context.newPage();
 
-    public boolean runOperation1() {
-        try (Playwright playwright = Playwright.create()) {
-            Browser browser = launchBrowser(playwright);
-            BrowserContext context = browser.newContext();
-            Page page = context.newPage();
+	      
+	                page.navigate("https://www.siae.it/it/");
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
+	                page.locator("input[type=\"text\"]").fill("originals_italy@feverup.com");
+	                page.locator("input[type=\"password\"]").fill("Siae@123");
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
+	               
+	           
+	            
+	                // 2 "Portale Organizzatori Professionali > Accedi"
+	                page.locator("#PORTUP_STD")
+	                        .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
+	                        .click();
+	             // 3. Nuovo permesso
+	                page.waitForSelector("text=Nuovo Permesso");
+	                page.getByText("Nuovo Permesso").click();
+	                
 
-            page.navigate("https://example.com");
-            page.waitForTimeout(5000);
+	            // 4. Inserimento dati statici (poi da Excel)
+	             // Inserisci città
+	                page.locator("input[placeholder='Città']").click();
+	                page.locator("input[placeholder='Città']").fill("BERGAMO");
+	                page.waitForSelector("ul[role='listbox'] >> text=BERGAMO");
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
 
-            page.close();
-            browser.close();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+	                // Inserisci locale
+	                page.locator("input[placeholder='Locale / Indirizzo']").click();
+	                page.locator("input[placeholder='Locale / Indirizzo']").fill("CENTRO CONGRESSI GIOVANNI");
+	                page.waitForSelector("ul[role='listbox'] >> text=CENTRO CONGRESSI");
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
+	                
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	                
+	             // 5 Seleziona Categoria Evento
+	     
+	                
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(0).click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('CONCERTI, MANIFESTAZIONI MUSICALI')").click();
+
+	                
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click(); // seconda tendina
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('CONCERTO LEGGERA')").click();
+
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	             // 6 Data evento   
+	                
+	                try {
+	                    // Apri il calendario
+	                    page.locator("input[readonly]").click();
+	                    
+	                    // Aspetta che appaia il calendario
+	                    page.waitForSelector(".DayPicker", new Page.WaitForSelectorOptions().setTimeout(3000));
+	                    
+	                    navigateToTargetMonth(page, "Giugno", 2025);
+	                    
+	                    selectDay(page, 25);
+	                    
+	                    System.out.println("✅ Data selezionata con successo");
+	                    
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
+	                    e.printStackTrace();
+	                }
+	                
+	             // Inserisci l'orario di inizio
+	                page.locator("input[placeholder='hh:mm']").nth(0).click();
+	                page.locator("input[placeholder='hh:mm']").nth(0).fill("21:00");
+
+	                // Inserisci l'orario di fine
+	                page.locator("input[placeholder='hh:mm']").nth(1).click();
+	                page.locator("input[placeholder='hh:mm']").nth(1).fill("23:00");
+
+	                // Seleziona modalità di ingresso (dropdown)
+	                page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('Ingresso a pagamento')").click();
+	 
+	                
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	             // 7 Descrizione 
+	                page.locator("input[name='furtherInfo']").fill("Candlelight Spring: Coldplay vs Imagine Dragons - Giovanni XXIII");
+	               
+	                Locator dropdown = page.locator("div#outlined-select");
+	                dropdown.click(new Locator.ClickOptions().setForce(true));
+
+	                // 2. Aspetta che la lista sia visibile
+	             page.waitForSelector("ul[role='listbox']");
+	             
+	             	// 3. Clicca sulla voce corretta del menu
+	             page.locator("li:has-text('Tutti i brani non tutelati o di pubblico dominio')").click();
+
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                page.pause();
+
+	            page.close();
+	            browser.close();
+	            return true;
+	      
+	    }
+
+/*
+    public List<EventoSiaeRow> estraiEventiDaExcel(ExcelTableView excelView) {
+        List<EventoSiaeRow> eventi = new ArrayList<>();
+        ObservableList<ObservableList<String>> righe = excelView.getTable().getItems();
+
+
+        for (ObservableList<String> riga : righe) {
+            // Stampa per debug
+            System.out.println("🔍 Riga Excel: " + riga);
+
+            // Verifica che la riga abbia abbastanza colonne
+            if (riga.size() < 10) {
+                System.err.println("⚠ Riga ignorata (colonne insufficienti): " + riga.size());
+                continue;
+            }
+
+            EventoSiaeRow evento = new EventoSiaeRow(
+            	    riga.get(0), // city
+            	    riga.get(1), // address
+            	    riga.get(2), // category
+            	    riga.get(3), // subCategory
+            	    riga.get(4), // date
+            	    riga.get(5), // timeFrom
+            	    riga.get(6), // timeTo
+            	    riga.get(7), // ticketType
+            	    riga.get(8), // description
+            	    riga.get(9)  // musicType
+            	);
+
+            eventi.add(evento);
         }
-    }
+
+        return eventi;
+    }*/
+
+   // }
     /*
      * 03/06/25 --> gestita la presenza di tabella con più pagine + *30/05/25
      * */
@@ -42,6 +188,7 @@ public class SiaeAutomationService {
     	 * successivamente verrano prese da input nella UI 
     	 * */
     	  
+
 
     	try (Playwright playwright = Playwright.create()) {
     		
@@ -665,6 +812,154 @@ public class SiaeAutomationService {
             System.err.println("Errore nel salvataggio del checkpoint:");
             e.printStackTrace();
         }
+    }
+    
+    /**
+     * Naviga al mese target nel calendario
+     */
+    private void navigateToTargetMonth(Page page, String targetMonth, int targetYear) {
+        int maxAttempts = 12;
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                // Trova il mese corrente visualizzato
+                String currentMonthText = getCurrentMonth(page);
+                System.out.println("Mese corrente: " + currentMonthText);
+                
+                // Controlla se siamo già nel mese giusto
+                if (currentMonthText.toLowerCase().contains(targetMonth.toLowerCase()) && 
+                    currentMonthText.contains(String.valueOf(targetYear))) {
+                    System.out.println("✅ Mese corretto raggiunto: " + currentMonthText);
+                    return;
+                }
+                
+                // Naviga al mese successivo
+                clickNextMonth(page);
+                page.waitForTimeout(500); // Piccola pausa per l'aggiornamento
+                
+            } catch (Exception e) {
+                System.err.println("Errore durante navigazione mese: " + e.getMessage());
+                break;
+            }
+        }
+        
+        throw new RuntimeException("❌ Non riesco a raggiungere il mese: " + targetMonth + " " + targetYear);
+    }
+
+    /**
+     * Ottiene il mese attualmente visualizzato
+     */
+    private String getCurrentMonth(Page page) {
+        // Prova diversi selettori per il mese
+        String[] selectors = {
+            ".DayPicker-Caption", 
+            ".DayPicker-Month .DayPicker-Caption",
+            "div[role='heading']"
+        };
+        
+        for (String selector : selectors) {
+            try {
+                Locator monthElements = page.locator(selector);
+                
+                // Se ci sono più elementi, trova il primo visibile
+                for (int i = 0; i < monthElements.count(); i++) {
+                    Locator element = monthElements.nth(i);
+                    if (element.isVisible()) {
+                        String text = element.textContent().trim();
+                        if (!text.isEmpty()) {
+                            return text;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Continua con il prossimo selettore
+            }
+        }
+        
+        throw new RuntimeException("❌ Impossibile trovare il mese corrente");
+    }
+
+    /**
+     * Clicca sul bottone mese successivo
+     */
+    private void clickNextMonth(Page page) {
+        String[] selectors = {
+            "button[aria-label='Go to next month']",
+            ".DayPicker-NavButton--next",
+            "button[title*='next']",
+            "button[title*='successivo']"
+        };
+        
+        for (String selector : selectors) {
+            try {
+                Locator button = page.locator(selector);
+                if (button.count() > 0 && button.isVisible()) {
+                    button.click();
+                    System.out.println("➡️ Cliccato su mese successivo");
+                    return;
+                }
+            } catch (Exception e) {
+                // Continua con il prossimo selettore
+            }
+        }
+        
+        throw new RuntimeException("❌ Bottone 'mese successivo' non trovato");
+    }
+
+    /**
+     * Seleziona il giorno specifico nel calendario
+     */
+    private void selectDay(Page page, int day) {
+        try {
+            // Approccio 1: Cerca per testo del giorno escludendo giorni esterni
+            Locator dayLocator = page.locator(
+                String.format(".DayPicker-Day:has-text('%d'):not(.DayPicker-Day--outside)", day)
+            );
+            
+            if (dayLocator.count() > 0) {
+                // Se ci sono più giorni con lo stesso numero, trova quello del mese corrente
+                for (int i = 0; i < dayLocator.count(); i++) {
+                    Locator currentDay = dayLocator.nth(i);
+                    if (currentDay.isVisible() && 
+                        !currentDay.getAttribute("class").contains("DayPicker-Day--outside")) {
+                        currentDay.click();
+                        System.out.println("✅ Giorno " + day + " selezionato (metodo 1)");
+                        return;
+                    }
+                }
+            }
+            
+            // Approccio 2: Cerca tra tutte le celle del calendario
+            Locator allDays = page.locator(".DayPicker-Day[role='gridcell']");
+            for (int i = 0; i < allDays.count(); i++) {
+                Locator currentDay = allDays.nth(i);
+                String dayText = currentDay.textContent().trim();
+                
+                if (dayText.equals(String.valueOf(day)) && 
+                    currentDay.isVisible() &&
+                    !currentDay.getAttribute("class").contains("DayPicker-Day--outside")) {
+                    currentDay.click();
+                    System.out.println("✅ Giorno " + day + " selezionato (metodo 2)");
+                    return;
+                }
+            }
+            
+            // Approccio 3: Fallback con aria-label parziale
+            Locator dayWithAriaLabel = page.locator(
+                String.format("div[role='gridcell'][aria-label*='%d ']", day)
+            );
+            
+            if (dayWithAriaLabel.count() > 0) {
+                dayWithAriaLabel.first().click();
+                System.out.println("✅ Giorno " + day + " selezionato (metodo 3)");
+                return;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Errore nella selezione del giorno: " + e.getMessage());
+        }
+        
+        throw new RuntimeException("❌ Impossibile selezionare il giorno " + day);
     }
 
 }
