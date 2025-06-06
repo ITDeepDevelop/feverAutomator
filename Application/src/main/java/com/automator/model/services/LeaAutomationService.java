@@ -38,7 +38,7 @@ public class LeaAutomationService {
         }
     }
 
-    public boolean downloadLicense( String email, String password) {
+    public boolean downloadLicense( String email, String password, String month, String year) {
         int maxAttempts = 2;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try (Playwright playwright = Playwright.create()) {
@@ -89,7 +89,6 @@ public class LeaAutomationService {
                 // 9. Naviga esplicitamente all’URL delle licenze
                 page.navigate("https://licence.soundreef.com/it/licenses");
 
-                //TODO: Search DB di THOMAS che restituisce lista di righe di interesse
                 List<EventoRow> toDownload = new ArrayList<>();
                 try {
                     com.automator.model.services.ExcelReader reader = new ExcelReader();
@@ -110,7 +109,7 @@ public class LeaAutomationService {
                         eventName = eventName.substring(0, index);
                     }
 
-                    System.out.println(eventName);
+                    if(eventName.isEmpty()) break;
 
                     // 10. Trova titolo parziale di una licenza
                     Locator matches = page.getByText(
@@ -140,11 +139,10 @@ public class LeaAutomationService {
                         // Leggi l’attributo “value”
                         String dateValue = dateLocator.getAttribute("value");
 
-                        //TODO inserire input year e month
-                        int year = 2025;
-                        int month = 5;
+                        int yearToUse = Integer.parseInt(year);
+                        int monthToUse = Integer.parseInt(month);
 
-                        boolean rightTime = matchesYearMonth(dateValue, year, month);
+                        boolean rightTime = matchesYearMonth(dateValue, yearToUse, monthToUse);
                         if (rightTime) {
                             // 11. Intercetta il download e clicca su "Scarica licenza"
                             Download download = page.waitForDownload(() -> {

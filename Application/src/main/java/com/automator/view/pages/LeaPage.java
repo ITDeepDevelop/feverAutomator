@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 //package com.automator.Pages;
 
 import com.automator.controller.LeaController;
-import com.automator.controller.SiaeController;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -26,6 +25,8 @@ public class LeaPage extends BorderPane {
     private final LeaController leaController;
     private final TextField emailField;
     private final PasswordField passwordField;
+    private final TextField monthField;
+    private final TextField yearField;
 
 
 
@@ -155,15 +156,57 @@ public class LeaPage extends BorderPane {
                               "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);");
         operationsBox.setPrefWidth(420);
 
+        Label timeTitle = new Label("Periodo");
+        timeTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
+        // Campo “Mese”
+        Label monthLabel = new Label("Mese:");
+        monthLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #34495e; -fx-font-weight: 500;");
+        monthField = new TextField();
+        monthField.setStyle(
+                "-fx-pref-height: 30px; -fx-font-size: 13px; " +
+                        "-fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;"
+        );
+        monthField.setPrefWidth(80);
+
+        // Campo “Anno”
+        Label yearLabel = new Label("Anno:");
+        yearLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #34495e; -fx-font-weight: 500;");
+        yearField = new TextField();
+        yearField.setStyle(
+                "-fx-pref-height: 30px; -fx-font-size: 13px; " +
+                        "-fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;"
+        );
+        yearField.setPrefWidth(80);
+
+        HBox dateInputsBox = new HBox(15,
+                new VBox(2, monthLabel, monthField),
+                new VBox(2, yearLabel, yearField)
+        );
+        dateInputsBox.setAlignment(Pos.CENTER);
+
+        VBox timeBox = new VBox(8, timeTitle, dateInputsBox);
+        timeBox.setPadding(new Insets(20));
+        timeBox.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-border-color: #e9ecef; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 5, 0, 0, 1);"
+        );
+        timeBox.setMaxWidth(220);
+        timeBox.setAlignment(Pos.CENTER);
+
         // Layout centrale migliorato
         HBox centerWrapper = new HBox(30, credentialsBox, operationsBox);
         centerWrapper.setAlignment(Pos.CENTER);
         centerWrapper.setPadding(new Insets(30, 20, 30, 20));
 
         // Wrapper con sfondo
-        VBox mainWrapper = new VBox(centerWrapper);
+        VBox mainWrapper = new VBox(20, centerWrapper, timeBox);
+        mainWrapper.setAlignment(Pos.CENTER);
         mainWrapper.setStyle("-fx-background-color: #f5f6fa;");
-        
+        mainWrapper.setPadding(new Insets(20));
         this.setCenter(mainWrapper);
     }
 
@@ -258,7 +301,7 @@ public class LeaPage extends BorderPane {
     private void executeOperation1(Circle statusIcon) {
         updateStatusIcon(statusIcon, "running");
         // Esegui operazione 1
-        boolean success = leaController.handleOperation("Op1", null, null);
+        boolean success = leaController.handleOperation("Op1", null, null, null, null);
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
@@ -267,9 +310,11 @@ public class LeaPage extends BorderPane {
         // Prendi le credenziali dai campi
         String email = emailField.getText();
         String password = passwordField.getText();
+        String month = monthField.getText();
+        String year = yearField.getText();
         
         // Esegui operazione 2 (Accettazione Permessi)
-        boolean success = leaController.handleOperation("Download Licenza", email, password);
+        boolean success = leaController.handleOperation("Download Licenza", email, password, month, year );
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
