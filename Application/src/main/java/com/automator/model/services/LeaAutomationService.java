@@ -10,6 +10,8 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LeaAutomationService {
 
@@ -88,30 +90,41 @@ public class LeaAutomationService {
                 page.navigate("https://licence.soundreef.com/it/licenses");
 
                 //TODO: Search DB di THOMAS che restituisce lista di righe di interesse
-                String[] toDownload = {
-                        "Candlelight: tributo a Pino Daniele ed altri",
-                        "Candlelight: Tributo ai Coldplay",
-                        "Candlelight: I Classici del Rock",
-                };
+                List<EventoRow> toDownload = new ArrayList<>();
+                try {
+                    com.automator.model.services.ExcelReader reader = new ExcelReader();
+                    reader.read(ExcelStorage.getInstance().getFile());
+                    toDownload = reader.getEventoRows();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
-                for (String event : toDownload) {
+                for (EventoRow event : toDownload) {
                     System.out.println("Scarico il PDF: " + event);
                     page.navigate("https://licence.soundreef.com/it/licenses");
                     page.waitForTimeout(1000);
 
+                    String eventName = event.getNomeEventoELocation();
+                    int index = eventName.indexOf(" - ");
+                    if (index != -1) {
+                        eventName = eventName.substring(0, index);
+                    }
+
+                    System.out.println(eventName);
+
                     // 10. Trova titolo parziale di una licenza
                     Locator matches = page.getByText(
-                            event,
+                            eventName,
                             new Page.GetByTextOptions().setExact(false)
                     );
 
                     int count = matches.count();
                     if (count == 0) {
-                        System.out.println("Nessun elemento trovato per: " + event);
+                        System.out.println("Nessun elemento trovato per: " + eventName);
                         continue;
                     }
 
-                    System.out.println("Trovati " + count + " elementi per: " + event);
+                    System.out.println("Trovati " + count + " elementi per: " + eventName);
 
                     for (int i = 0; i < count; i++) {
                         page.navigate("https://licence.soundreef.com/it/licenses");
