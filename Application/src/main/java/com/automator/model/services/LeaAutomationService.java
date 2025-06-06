@@ -124,6 +124,7 @@ public class LeaAutomationService {
                     }
 
                     System.out.println("Trovati " + count + " elementi per: " + eventName);
+                    boolean reachedRightTime = false;
 
                     for (int i = 0; i < count; i++) {
                         page.navigate("https://licence.soundreef.com/it/licenses");
@@ -144,6 +145,7 @@ public class LeaAutomationService {
 
                         boolean rightTime = matchesYearMonth(dateValue, yearToUse, monthToUse);
                         if (rightTime) {
+                            reachedRightTime = true;
                             // 11. Intercetta il download e clicca su "Scarica licenza"
                             Download download = page.waitForDownload(() -> {
                                 // getByRole su Page per il link di download
@@ -160,7 +162,7 @@ public class LeaAutomationService {
                             System.out.println("File salvato in: " + targetPath.toAbsolutePath());
 
                         }
-                        else break; //sono in ordine cronologico, la prima riga con data non valida sarà seguita da sole righe con data non valida
+                        else if(reachedRightTime) break; //sono in ordine cronologico, la prima riga con data non valida sarà seguita da sole righe con data non valida
                     }
                 }
 
