@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -30,6 +31,18 @@ public class SiaeAutomationService {
 	
 	
 	 public boolean runOperation1() {
+		
+		 ExcelReader reader = new ExcelReader();
+		 
+		 try {
+			reader.read(ExcelStorage.getInstance().getFile());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 System.out.print("TEST");
+		 List <EventoRow> eventlist = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
+
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
 	            BrowserContext context = browser.newContext();
@@ -53,77 +66,119 @@ public class SiaeAutomationService {
 	                page.waitForSelector("text=Nuovo Permesso");
 	                page.getByText("Nuovo Permesso").click();
 	                
-
+	              for(EventoRow evento: eventlist ) {
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
-	                page.locator("input[placeholder='Città']").click();
-	                page.locator("input[placeholder='Città']").fill("BERGAMO");
-	                page.waitForSelector("ul[role='listbox'] >> text=BERGAMO");
-	                page.keyboard().press("ArrowDown");
-	                page.keyboard().press("Enter");
-
-	                // Inserisci locale
-	                page.locator("input[placeholder='Locale / Indirizzo']").click();
-	                page.locator("input[placeholder='Locale / Indirizzo']").fill("CENTRO CONGRESSI GIOVANNI");
-	                page.waitForSelector("ul[role='listbox'] >> text=CENTRO CONGRESSI");
+	            	page.locator("input[placeholder='Città']").click();
+	                page.locator("input[placeholder='Città']").fill(evento.getCitta());
+	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getCitta());
 	                page.keyboard().press("ArrowDown");
 	                page.keyboard().press("Enter");
 	                
+	                // Inserisci locale
+	                page.locator("input[placeholder='Locale / Indirizzo']").click();
+	                page.locator("input[placeholder='Locale / Indirizzo']").fill(evento.getNomeLocation());
+	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getNomeLocation());
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
+
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                
 	                
 	             // 5 Seleziona Categoria Evento
-	     
+	                String codice = evento.getCodiceSpettacoloGenere();
+	                String categoriaEvento = CategoriaEventoMapper.getCategoria(codice);
+	                String genereEvento = CategoriaEventoMapper.getGenere(codice);
 	                
+	             // Apri la prima tendina (Categoria)
 	                page.locator("div[role='button']:not(.Mui-disabled)").nth(0).click();
 	                page.waitForSelector("ul[role='listbox']");
-	                page.locator("li:has-text('CONCERTI, MANIFESTAZIONI MUSICALI')").click();
 
-	                
-	                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click(); // seconda tendina
+	                // Clicca sull'opzione della categoria mappata
+	                page.locator("li:has-text('" + categoriaEvento + "')").click();
+
+	                // Apri la seconda tendina (Genere)
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click();
 	                page.waitForSelector("ul[role='listbox']");
-	                page.locator("li:has-text('CONCERTO LEGGERA')").click();
+
+	                // Clicca sull'opzione del genere mappato
+	                page.locator("li:has-text('" + genereEvento + "')").click();
 
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                
+	          
+	           
 	             // 6 Data evento   
-	                
 	                try {
+	                    String dataEvento = evento.getDataEvento(); // Es. "2025-06-25"
+	                    
+	                    System.out.println("📅 Data letta da Excel: " + dataEvento); // 🔍 DEBUG
+
+	                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+	                    LocalDate data = LocalDate.parse(dataEvento, formatter); // Assicurati che il formato sia corretto
+
 	                    // Apri il calendario
 	                    page.locator("input[readonly]").click();
-	                    
+
 	                    // Aspetta che appaia il calendario
 	                    page.waitForSelector(".DayPicker", new Page.WaitForSelectorOptions().setTimeout(3000));
-	                    
-	                    navigateToTargetMonth(page, "Giugno", 2025);
-	                    
-	                    selectDay(page, 25);
-	                    
+
+	                    String meseItaliano = data.getMonth().getDisplayName(TextStyle.FULL, Locale.ITALIAN);
+	                    int anno = data.getYear();
+	                    int giorno = data.getDayOfMonth();
+
+	                    navigateToTargetMonth(page, meseItaliano, anno);
+	                    selectDay(page, giorno);
+
 	                    System.out.println("✅ Data selezionata con successo");
-	                    
 	                } catch (Exception e) {
 	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
 	                    e.printStackTrace();
 	                }
-	                
-	             // Inserisci l'orario di inizio
-	                page.locator("input[placeholder='hh:mm']").nth(0).click();
-	                page.locator("input[placeholder='hh:mm']").nth(0).fill("21:00");
 
-	                // Inserisci l'orario di fine
-	                page.locator("input[placeholder='hh:mm']").nth(1).click();
-	                page.locator("input[placeholder='hh:mm']").nth(1).fill("23:00");
+	                // 7. Fasce orarie da Excel
+	                try {
+	                    String sessioni = evento.getSessioni(); // Es. "20:00H & 22:00H"
+	                    String[] orari = sessioni.replace("H", "").split("&");
+	                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-	                // Seleziona modalità di ingresso (dropdown)
-	                page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").click();
-	                page.waitForSelector("ul[role='listbox']");
-	                page.locator("li:has-text('Ingresso a pagamento')").click();
-	 
-	                
+	                    for (int i = 0; i < orari.length; i++) {
+	                        String orarioInizio = orari[i].trim();
+
+	                        LocalTime inizio = LocalTime.parse(orarioInizio, timeFormatter);
+	                        LocalTime fine = inizio.plusHours(1);
+	                        String orarioFine = fine.format(timeFormatter);
+
+	                        if (i == 0) {
+	                            page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
+	                            page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
+
+	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
+	                            page.waitForSelector("ul[role='listbox']");
+	                            page.locator("li:has-text('Ingresso a pagamento')").click();
+	                        } else {
+	                            page.getByText("Aggiungi").click();
+	                            page.waitForTimeout(500);
+
+	                            page.locator("input[placeholder='hh:mm']").nth(i * 2).fill(orarioInizio);
+	                            page.locator("input[placeholder='hh:mm']").nth(i * 2 + 1).fill(orarioFine);
+
+	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
+	                            page.waitForSelector("ul[role='listbox']");
+	                            page.locator("li:has-text('Ingresso a pagamento')").click();
+	                        }
+	                    }
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nella gestione delle sessioni orarie: " + e.getMessage());
+	                    e.printStackTrace();
+	                }
+	               
+
+	           
+	       
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                
 	             // 7 Descrizione 
-	                page.locator("input[name='furtherInfo']").fill("Candlelight Spring: Coldplay vs Imagine Dragons - Giovanni XXIII");
+	                page.locator("input[name='furtherInfo']").fill(evento.getNomeEventoELocation());
 	               
 	                Locator dropdown = page.locator("div#outlined-select");
 	                dropdown.click(new Locator.ClickOptions().setForce(true));
@@ -136,7 +191,7 @@ public class SiaeAutomationService {
 
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                page.pause();
-
+	              } 
 	            page.close();
 	            browser.close();
 	            return true;
@@ -960,6 +1015,97 @@ public class SiaeAutomationService {
         }
         
         throw new RuntimeException("❌ Impossibile selezionare il giorno " + day);
+    }
+    
+    public static class CategoriaEventoMapper {
+    	public static String getCategoria(String codice) {
+    	    String lower = codice.toLowerCase();
+
+    	    if (lower.contains("musica leggera") || lower.contains("musica classica") || lower.contains("jazz") || lower.contains("folk")) {
+    	        return "CONCERTI, MANIFESTAZIONI MUSICALI, MUSICA IN EVENTI, SPETTACOLI DI ARTE VARIA";
+    	    }
+
+    	    if (lower.contains("rivista") || lower.contains("lirica") || lower.contains("operetta") || lower.contains("cabaret")
+    	        || lower.contains("dialettale") || lower.contains("recital") || lower.contains("balletto")
+    	        || lower.contains("danza") || lower.contains("burattini")) {
+    	        return "TEATRO, LIRICA, RECITAL, BALLETTI";
+    	    }
+
+    	    if (lower.contains("sport") || isGenereSportivo(lower)) {
+    	        return "MUSICA IN EVENTI SPORTIVI E GARE DA BALLO";
+    	    }
+
+    	    if (lower.contains("ballo") || lower.contains("orchestra")
+    	    	    || lower.contains("ballo sm") || lower.contains("ballo or")
+    	    	    || (lower.contains("esecuz") && (lower.contains("sm") || lower.contains("or")))) {
+    	    	    return "TRATTENIMENTI MUSICALI CON BALLO O SENZA BALLO";
+    	    	}
+
+    	    return "CONCERTI, MANIFESTAZIONI MUSICALI, MUSICA IN EVENTI, SPETTACOLI DI ARTE VARIA"; // fallback
+    	}
+
+        public static String getGenere(String codice) {
+            String lower = codice.toLowerCase();
+
+            if (lower.contains("musica leggera")) return "Concerto leggera";
+            if (lower.contains("musica classica")) return "Concerto classica";
+            if (lower.contains("jazz")) return "Concerto jazz";
+            if (lower.contains("folk")) return "Concerti folkloristici";
+            if (lower.contains("banda")) return "Banda";
+            if (lower.contains("piazza")) return "Feste in piazza";
+            if (lower.contains("mostre")) return "Mostre";
+            if (lower.contains("fiere")) return "Fiere";
+            if (lower.contains("parchi")) return "Parchi divertimento";
+            if (lower.contains("circo")) return "Circo";
+            
+            // Generi sportivi
+            if (lower.contains("atletica")) return "Atletica leggera";
+            if (lower.contains("automobilismo")) return "Automobilismo";
+            if (lower.contains("baseball")) return "Baseball";
+            if (lower.contains("basket")) return "Basket";
+            if (lower.contains("calcio serie c")) return "Calcio serie C e inferiori";
+            if (lower.contains("calcio")) return "Calcio";
+            if (lower.contains("ciclismo")) return "Ciclismo";
+            if (lower.contains("ippici")) return "Concorsi ippici";
+            if (lower.contains("cavalli")) return "Corse cavalli";
+            if (lower.contains("motociclismo")) return "Motociclismo";
+            if (lower.contains("motonautica")) return "Motonautica";
+            if (lower.contains("nuoto")) return "Nuoto e pallanuoto";
+            if (lower.contains("pallavolo")) return "Pallavolo";
+            if (lower.contains("pugilato")) return "Pugilato";
+            if (lower.contains("rugby")) return "Rugby";
+            if (lower.contains("invernali")) return "Sport invernali";
+            if (lower.contains("tennis")) return "Tennis";
+            if (lower.contains("sport")) return "Sport";
+            
+            // Generi teatrali
+            if (lower.contains("rivista") || lower.contains("comm.musicale")) return "Comm.musicale/Rivista";
+            if (lower.contains("lirica")) return "Lirica";
+            if (lower.contains("operetta")) return "Operetta";
+            if (lower.contains("cabaret")) return "Prosa / Cabaret";
+            if (lower.contains("dialettale")) return "Prosa dialettale";
+            if (lower.contains("recital")) return "Recital";
+            if (lower.contains("balletto")) return "Balletto";
+            if (lower.contains("danza")) return "Danza";
+            if (lower.contains("burattini")) return "Burattini";
+            
+            // Ballo / Musica
+            if (lower.contains("ballo sm")) return "Ballo SM";
+            if (lower.contains("ballo or")) return "Ballo OR";
+            if (lower.contains("esecuz") && lower.contains("sm")) return "Esecuz. musicali SM";
+            if (lower.contains("esecuz") && lower.contains("or")) return "Esecuz. musicali OR";
+
+            return "Arte varia"; // fallback
+        }
+
+        private static  boolean isGenereSportivo(String lower) {
+            return lower.contains("atletica") || lower.contains("automobilismo") || lower.contains("baseball") ||
+                   lower.contains("basket") || lower.contains("calcio") || lower.contains("ciclismo") ||
+                   lower.contains("ippici") || lower.contains("cavalli") || lower.contains("motociclismo") ||
+                   lower.contains("motonautica") || lower.contains("nuoto") || lower.contains("pallavolo") ||
+                   lower.contains("pugilato") || lower.contains("rugby") || lower.contains("invernali") ||
+                   lower.contains("tennis") || lower.contains("sport");
+        }
     }
 
 }
