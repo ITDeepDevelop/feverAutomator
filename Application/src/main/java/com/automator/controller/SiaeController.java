@@ -11,8 +11,8 @@ public class SiaeController {
 
     public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
-            case "Operazione 1":
-                return siaeService.runOperation1();
+            case "Richiesta permesso per un evento":
+                return siaeService.nuoviPermessi(email,password);
             case "Accettazione Permessi":
                 return siaeService.licenseCheck(email,password);
             case "Assegna Bordero":

@@ -1,38 +1,241 @@
 package com.automator.model.services;
 
+import com.automator.view.components.ExcelTableView;
 import com.microsoft.playwright.*;
 
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 import com.microsoft.playwright.options.AriaRole;
+
+
+import com.microsoft.playwright.options.SelectOption;
+
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.io.*;
+import javafx.collections.ObservableList;
 
 
 public class SiaeAutomationService {
+	
+	
+	 public boolean nuoviPermessi(String email, String password) {
+		
+		 ExcelReader reader = new ExcelReader();
+		 
+		 try {
+			reader.read(ExcelStorage.getInstance().getFile());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 System.out.print("TEST");
+		 List <EventoRow> eventlist = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
 
-    public boolean runOperation1() {
-        try (Playwright playwright = Playwright.create()) {
-            Browser browser = launchBrowser(playwright);
-            BrowserContext context = browser.newContext();
-            Page page = context.newPage();
+	        Playwright playwright = Playwright.create();
+	            Browser browser = launchBrowser(playwright);
+	            BrowserContext context = browser.newContext();
+	            Page page = context.newPage();
 
-            page.navigate("https://example.com");
-            page.waitForTimeout(5000);
+	      
+	                page.navigate("https://www.siae.it/it/");
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
+	                page.locator("input[type=\"text\"]").fill(email);
+	                page.locator("input[type=\"password\"]").fill(password);
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
+	               
+	           
+	            
+	                // 2 "Portale Organizzatori Professionali > Accedi"
+	                page.locator("#PORTUP_STD")
+	                        .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Accedi"))
+	                        .click();
+	             // 3. Nuovo permesso
+	                page.waitForSelector("text=Nuovo Permesso");
+	                page.getByText("Nuovo Permesso").click();
+	                int j = 0;
+	              for(EventoRow evento: eventlist ) {
+	            // 4. Inserimento dati statici (poi da Excel)
+	             // Inserisci città
+	            	page.locator("input[placeholder='Città']").click();
+	                page.locator("input[placeholder='Città']").fill(evento.getCitta());
+	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getCitta());
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
+	                
+	                // Inserisci locale
+	                page.locator("input[placeholder='Locale / Indirizzo']").click();
+	                page.locator("input[placeholder='Locale / Indirizzo']").fill(evento.getNomeLocation());
+	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getNomeLocation());
+	                page.keyboard().press("ArrowDown");
+	                page.keyboard().press("Enter");
 
-            page.close();
-            browser.close();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	                
+	             // 5 Seleziona Categoria Evento
+	                String codice = evento.getCodiceSpettacoloGenere();
+	                String categoriaEvento = CategoriaEventoMapper.getCategoria(codice);
+	                String genereEvento = CategoriaEventoMapper.getGenere(codice);
+	                
+	             // Apri la prima tendina (Categoria)
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(0).click();
+	                page.waitForSelector("ul[role='listbox']");
+
+	                // Clicca sull'opzione della categoria mappata
+	                page.locator("li:has-text('" + categoriaEvento + "')").click();
+
+	                // Apri la seconda tendina (Genere)
+	                page.locator("div[role='button']:not(.Mui-disabled)").nth(1).click();
+	                page.waitForSelector("ul[role='listbox']");
+
+	                // Clicca sull'opzione del genere mappato
+	                page.locator("li:has-text('" + genereEvento + "')").click();
+
+
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	           
+	             // 6 Data evento   
+	                try {
+	                    String dataEvento = evento.getDataEvento(); // Es. "2025-06-25"
+	                    
+	                    System.out.println("📅 Data letta da Excel: " + dataEvento); // 🔍 DEBUG
+
+	                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+	                    LocalDate data = LocalDate.parse(dataEvento, formatter); // Assicurati che il formato sia corretto
+
+	                    // Apri il calendario
+	                    page.locator("input[readonly]").click();
+
+	                    // Aspetta che appaia il calendario
+	                    page.waitForSelector(".DayPicker", new Page.WaitForSelectorOptions().setTimeout(3000));
+
+	                    String meseItaliano = data.getMonth().getDisplayName(TextStyle.FULL, Locale.ITALIAN);
+	                    int anno = data.getYear();
+	                    int giorno = data.getDayOfMonth();
+
+	                    navigateToTargetMonth(page, meseItaliano, anno);
+	                    selectDay(page, giorno);
+
+	                    System.out.println("✅ Data selezionata con successo");
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
+	                    e.printStackTrace();
+	                }
+
+	                // 7. Fasce orarie da Excel
+	                try {
+	                    String sessioni = evento.getSessioni(); // Es. "20:00H & 22:00H"
+	                    String[] orari = sessioni.replace("H", "").split("&");
+	                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+	                    for (int i = 0; i < orari.length; i++) {
+	                        String orarioInizio = orari[i].trim();
+
+	                        LocalTime inizio = LocalTime.parse(orarioInizio, timeFormatter);
+	                        LocalTime fine = inizio.plusHours(1);
+	                        String orarioFine = fine.format(timeFormatter);
+
+	                        if (i == 0) {
+	                            page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
+	                            page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
+
+	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
+	                            page.waitForSelector("ul[role='listbox']");
+	                            page.locator("li:has-text('Ingresso a pagamento')").click();
+	                        } else {
+	                            page.getByText("Aggiungi").click();
+	                            page.waitForTimeout(500);
+
+	                            page.locator("input[placeholder='hh:mm']").nth(i * 2).fill(orarioInizio);
+	                            page.locator("input[placeholder='hh:mm']").nth(i * 2 + 1).fill(orarioFine);
+
+	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
+	                            page.waitForSelector("ul[role='listbox']");
+	                            page.locator("li:has-text('Ingresso a pagamento')").click();
+	                        }
+	                    }
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nella gestione delle sessioni orarie: " + e.getMessage());
+	                    e.printStackTrace();
+	                }
+	               
+
+	           
+	       
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                
+	             // 7 Descrizione 
+	                page.locator("input[name='furtherInfo']").fill(evento.getNomeEventoELocation());
+	                Locator checkbox = page.locator("label:has-text('Sono in possesso di licenza OGC') input[type='checkbox']");
+	                checkbox.click();
+	                
+	                
+	                System.out.println("⏳ Attendo che l’utente carichi un PDF nella sezione documenti...");
+
+	             // Cambia il selettore qui sotto con quello corretto (es. nome file, estensione, classe ecc.)
+	             page.waitForSelector("text=.pdf", new Page.WaitForSelectorOptions().setTimeout(3000000)); // 5 min max
+
+	             System.out.println("✅ PDF rilevato! Continuo con l’automazione...");
+	             
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	          
+	                
+	                Locator dropdown = page.locator("div#outlined-select");
+	                dropdown.click(new Locator.ClickOptions().setForce(true));
+
+	                // Aspetta che l'opzione "No" sia visibile
+	                page.waitForSelector("ul[role='listbox'] li[role='option']");
+
+	                // Clicca su "No" in modo preciso usando getByRole con setExact
+	                page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions()
+	                    .setName("No")
+	                    .setExact(true)
+	                ).click();
+	             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	             
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	                page.pause();	
+	                /*
+	                try {	
+	                    // Hover sul pulsante esatto "Permessi" usando selettore preciso
+	                    Locator menuPermessi = page.locator("button[aria-controls='simple-menu'] >> text=Permessi");
+	                    menuPermessi.hover();
+	                    page.waitForTimeout(500); // tempo per far apparire il dropdown
+
+	                    // Clic su "Aggiungi Permesso"
+	                    Locator aggiungiPermesso = page.locator("text=Aggiungi Permesso");
+	                    aggiungiPermesso.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+	                    aggiungiPermesso.click();
+
+	                    System.out.println("✅ Cliccato su 'Aggiungi Permesso'");
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore durante il click su 'Aggiungi Permesso': " + e.getMessage());
+	                }
+
+					System.out.println("▶ Elaborazione evento " + (j + 1) + " di " + eventlist.size());
+	              */
+	              }
+	            page.close();
+	            browser.close();
+	            return true;
+	      
+	    }
+
+   // }
     /*
      * 03/06/25 --> gestita la presenza di tabella con più pagine + *30/05/25
      * */
@@ -42,6 +245,7 @@ public class SiaeAutomationService {
     	 * successivamente verrano prese da input nella UI 
     	 * */
     	  
+
 
     	try (Playwright playwright = Playwright.create()) {
     		
@@ -664,6 +868,245 @@ public class SiaeAutomationService {
         } catch (IOException e) {
             System.err.println("Errore nel salvataggio del checkpoint:");
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Naviga al mese target nel calendario
+     */
+    private void navigateToTargetMonth(Page page, String targetMonth, int targetYear) {
+        int maxAttempts = 12;
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                // Trova il mese corrente visualizzato
+                String currentMonthText = getCurrentMonth(page);
+                System.out.println("Mese corrente: " + currentMonthText);
+                
+                // Controlla se siamo già nel mese giusto
+                if (currentMonthText.toLowerCase().contains(targetMonth.toLowerCase()) && 
+                    currentMonthText.contains(String.valueOf(targetYear))) {
+                    System.out.println("✅ Mese corretto raggiunto: " + currentMonthText);
+                    return;
+                }
+                
+                // Naviga al mese successivo
+                clickNextMonth(page);
+                page.waitForTimeout(500); // Piccola pausa per l'aggiornamento
+                
+            } catch (Exception e) {
+                System.err.println("Errore durante navigazione mese: " + e.getMessage());
+                break;
+            }
+        }
+        
+        throw new RuntimeException("❌ Non riesco a raggiungere il mese: " + targetMonth + " " + targetYear);
+    }
+
+    /**
+     * Ottiene il mese attualmente visualizzato
+     */
+    private String getCurrentMonth(Page page) {
+        // Prova diversi selettori per il mese
+        String[] selectors = {
+            ".DayPicker-Caption", 
+            ".DayPicker-Month .DayPicker-Caption",
+            "div[role='heading']"
+        };
+        
+        for (String selector : selectors) {
+            try {
+                Locator monthElements = page.locator(selector);
+                
+                // Se ci sono più elementi, trova il primo visibile
+                for (int i = 0; i < monthElements.count(); i++) {
+                    Locator element = monthElements.nth(i);
+                    if (element.isVisible()) {
+                        String text = element.textContent().trim();
+                        if (!text.isEmpty()) {
+                            return text;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Continua con il prossimo selettore
+            }
+        }
+        
+        throw new RuntimeException("❌ Impossibile trovare il mese corrente");
+    }
+
+    /**
+     * Clicca sul bottone mese successivo
+     */
+    private void clickNextMonth(Page page) {
+        String[] selectors = {
+            "button[aria-label='Go to next month']",
+            ".DayPicker-NavButton--next",
+            "button[title*='next']",
+            "button[title*='successivo']"
+        };
+        
+        for (String selector : selectors) {
+            try {
+                Locator button = page.locator(selector);
+                if (button.count() > 0 && button.isVisible()) {
+                    button.click();
+                    System.out.println("➡️ Cliccato su mese successivo");
+                    return;
+                }
+            } catch (Exception e) {
+                // Continua con il prossimo selettore
+            }
+        }
+        
+        throw new RuntimeException("❌ Bottone 'mese successivo' non trovato");
+    }
+
+    /**
+     * Seleziona il giorno specifico nel calendario
+     */
+    private void selectDay(Page page, int day) {
+        try {
+            // Approccio 1: Cerca per testo del giorno escludendo giorni esterni
+            Locator dayLocator = page.locator(
+                String.format(".DayPicker-Day:has-text('%d'):not(.DayPicker-Day--outside)", day)
+            );
+            
+            if (dayLocator.count() > 0) {
+                // Se ci sono più giorni con lo stesso numero, trova quello del mese corrente
+                for (int i = 0; i < dayLocator.count(); i++) {
+                    Locator currentDay = dayLocator.nth(i);
+                    if (currentDay.isVisible() && 
+                        !currentDay.getAttribute("class").contains("DayPicker-Day--outside")) {
+                        currentDay.click();
+                        System.out.println("✅ Giorno " + day + " selezionato (metodo 1)");
+                        return;
+                    }
+                }
+            }
+            
+            // Approccio 2: Cerca tra tutte le celle del calendario
+            Locator allDays = page.locator(".DayPicker-Day[role='gridcell']");
+            for (int i = 0; i < allDays.count(); i++) {
+                Locator currentDay = allDays.nth(i);
+                String dayText = currentDay.textContent().trim();
+                
+                if (dayText.equals(String.valueOf(day)) && 
+                    currentDay.isVisible() &&
+                    !currentDay.getAttribute("class").contains("DayPicker-Day--outside")) {
+                    currentDay.click();
+                    System.out.println("✅ Giorno " + day + " selezionato (metodo 2)");
+                    return;
+                }
+            }
+            
+            // Approccio 3: Fallback con aria-label parziale
+            Locator dayWithAriaLabel = page.locator(
+                String.format("div[role='gridcell'][aria-label*='%d ']", day)
+            );
+            
+            if (dayWithAriaLabel.count() > 0) {
+                dayWithAriaLabel.first().click();
+                System.out.println("✅ Giorno " + day + " selezionato (metodo 3)");
+                return;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Errore nella selezione del giorno: " + e.getMessage());
+        }
+        
+        throw new RuntimeException("❌ Impossibile selezionare il giorno " + day);
+    }
+    
+    public static class CategoriaEventoMapper {
+    	public static String getCategoria(String codice) {
+    	    String lower = codice.toLowerCase();
+
+    	    if (lower.contains("musica leggera") || lower.contains("musica classica") || lower.contains("jazz") || lower.contains("folk")) {
+    	        return "CONCERTI, MANIFESTAZIONI MUSICALI, MUSICA IN EVENTI, SPETTACOLI DI ARTE VARIA";
+    	    }
+
+    	    if (lower.contains("rivista") || lower.contains("lirica") || lower.contains("operetta") || lower.contains("cabaret")
+    	        || lower.contains("dialettale") || lower.contains("recital") || lower.contains("balletto")
+    	        || lower.contains("danza") || lower.contains("burattini")) {
+    	        return "TEATRO, LIRICA, RECITAL, BALLETTI";
+    	    }
+
+    	    if (lower.contains("sport") || isGenereSportivo(lower)) {
+    	        return "MUSICA IN EVENTI SPORTIVI E GARE DA BALLO";
+    	    }
+
+    	    if (lower.contains("ballo") || lower.contains("orchestra")
+    	    	    || lower.contains("ballo sm") || lower.contains("ballo or")
+    	    	    || (lower.contains("esecuz") && (lower.contains("sm") || lower.contains("or")))) {
+    	    	    return "TRATTENIMENTI MUSICALI CON BALLO O SENZA BALLO";
+    	    	}
+
+    	    return "CONCERTI, MANIFESTAZIONI MUSICALI, MUSICA IN EVENTI, SPETTACOLI DI ARTE VARIA"; // fallback
+    	}
+
+        public static String getGenere(String codice) {
+            String lower = codice.toLowerCase();
+
+            if (lower.contains("musica leggera")) return "Concerto leggera";
+            if (lower.contains("musica classica")) return "Concerto classica";
+            if (lower.contains("jazz")) return "Concerto jazz";
+            if (lower.contains("folk")) return "Concerti folkloristici";
+            if (lower.contains("banda")) return "Banda";
+            if (lower.contains("piazza")) return "Feste in piazza";
+            if (lower.contains("mostre")) return "Mostre";
+            if (lower.contains("fiere")) return "Fiere";
+            if (lower.contains("parchi")) return "Parchi divertimento";
+            if (lower.contains("circo")) return "Circo";
+            
+            // Generi sportivi
+            if (lower.contains("atletica")) return "Atletica leggera";
+            if (lower.contains("automobilismo")) return "Automobilismo";
+            if (lower.contains("baseball")) return "Baseball";
+            if (lower.contains("basket")) return "Basket";
+            if (lower.contains("calcio serie c")) return "Calcio serie C e inferiori";
+            if (lower.contains("calcio")) return "Calcio";
+            if (lower.contains("ciclismo")) return "Ciclismo";
+            if (lower.contains("ippici")) return "Concorsi ippici";
+            if (lower.contains("cavalli")) return "Corse cavalli";
+            if (lower.contains("motociclismo")) return "Motociclismo";
+            if (lower.contains("motonautica")) return "Motonautica";
+            if (lower.contains("nuoto")) return "Nuoto e pallanuoto";
+            if (lower.contains("pallavolo")) return "Pallavolo";
+            if (lower.contains("pugilato")) return "Pugilato";
+            if (lower.contains("rugby")) return "Rugby";
+            if (lower.contains("invernali")) return "Sport invernali";
+            if (lower.contains("tennis")) return "Tennis";
+            if (lower.contains("sport")) return "Sport";
+            
+            // Generi teatrali
+            if (lower.contains("rivista") || lower.contains("comm.musicale")) return "Comm.musicale/Rivista";
+            if (lower.contains("lirica")) return "Lirica";
+            if (lower.contains("operetta")) return "Operetta";
+            if (lower.contains("cabaret")) return "Prosa / Cabaret";
+            if (lower.contains("dialettale")) return "Prosa dialettale";
+            if (lower.contains("recital")) return "Recital";
+            if (lower.contains("balletto")) return "Balletto";
+            if (lower.contains("danza")) return "Danza";
+            if (lower.contains("burattini")) return "Burattini";
+            
+            // Ballo / Musica
+            if (lower.contains("ballo sm")) return "Ballo SM";
+            if (lower.contains("ballo or")) return "Ballo OR";
+            if (lower.contains("esecuz") && lower.contains("sm")) return "Esecuz. musicali SM";
+            if (lower.contains("esecuz") && lower.contains("or")) return "Esecuz. musicali OR";
+
+            return "Arte varia"; // fallback
+        }
+
+        private static  boolean isGenereSportivo(String lower) {
+            return lower.contains("atletica") || lower.contains("automobilismo") || lower.contains("baseball") ||
+                   lower.contains("basket") || lower.contains("calcio") || lower.contains("ciclismo") ||
+                   lower.contains("ippici") || lower.contains("cavalli") || lower.contains("motociclismo") ||
+                   lower.contains("motonautica") || lower.contains("nuoto") || lower.contains("pallavolo") ||
+                   lower.contains("pugilato") || lower.contains("rugby") || lower.contains("invernali") ||
+                   lower.contains("tennis") || lower.contains("sport");
         }
     }
 
