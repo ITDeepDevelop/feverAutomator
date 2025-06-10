@@ -7,7 +7,7 @@ public class LeaController {
 
     public boolean handleOperation(String operationName, String email, String password, String month, String year) {
         switch (operationName) {
-            case "Op1": return leaService.op1();
+            case "Conferma Evento": return leaService.op1(email, password);
             case "Download Licenza": return leaService.downloadLicense( email, password, month, year);
             default: {
                 System.out.println("Invalid operation name: " + operationName);
