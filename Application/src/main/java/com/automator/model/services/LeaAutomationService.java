@@ -13,6 +13,11 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.automator.model.services.EventoRow.toPDFName;
+
 public class LeaAutomationService {
 
     public boolean op1() {
@@ -99,7 +104,7 @@ public class LeaAutomationService {
                 }
 
                 for (EventoRow event : toDownload) {
-                    System.out.println("Scarico il PDF: " + event);
+                    System.out.println("Analizzo il PDF: " + event);
                     page.navigate("https://licence.soundreef.com/it/licenses");
                     page.waitForTimeout(1000);
 
@@ -131,6 +136,7 @@ public class LeaAutomationService {
                         Locator single = matches.nth(i);
                         // stampa il testo esatto che stiamo per cliccare (opzionale, per debug)
                         System.out.println("  → Clicco su: " + single.innerText());
+                        String time = extractTime(single.innerText());
 
                         // clicca l’i‐esimo elemento
                         single.click();
@@ -157,7 +163,8 @@ public class LeaAutomationService {
                             Path desktopDownloads = Paths.get(userHome, "Desktop", "LeaDownloads");
                             // Creazione della cartella se non esiste
                             Files.createDirectories(desktopDownloads);
-                            Path targetPath = desktopDownloads.resolve(download.suggestedFilename());
+                            String fileName = toPDFName(event.getNomeEventoELocation(), event.getDataEvento(), time);
+                            Path targetPath = desktopDownloads.resolve(fileName);
                             download.saveAs(targetPath);
                             System.out.println("File salvato in: " + targetPath.toAbsolutePath());
 
@@ -196,5 +203,22 @@ public class LeaAutomationService {
             // Se il formato non è "yyyy-MM-dd", restituiamo false
             return false;
         }
+    }
+
+    public String extractTime(String text) {
+        if (text == null) return "";
+
+        // 1) Trova "H" seguito da orario tipo 22:00 (case-insensitive sulla H)
+        Pattern pattern = Pattern.compile("(?i)H\\s*(\\d{1,2}:\\d{2})");
+        Matcher matcher = pattern.matcher(text);
+
+        if (matcher.find()) {
+            // 2) group(1) è ad esempio "22:00"
+            String timeWithColon = matcher.group(1);
+            // 3) Rimuove tutto ciò che non è cifra, ottenendo "2200"
+            return timeWithColon.replaceAll("\\D", "");
+        }
+
+        return "";
     }
 }

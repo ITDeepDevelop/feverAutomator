@@ -34,4 +34,22 @@ public class EventoRow {
         System.out.println("----------------------------\n");
     }
 
+    public static String toPDFName(String nomeEventoLocation, String data, String sessione) {
+        if (nomeEventoLocation == null) nomeEventoLocation = "";
+        if (data == null) data = "";
+        if (sessione == null) sessione = "";
+
+        // 1) rimuove spazi, '/', '\', ':', '-'
+        String cleanEvento = nomeEventoLocation.replaceAll("[\\s:/\\\\-]", "");
+        // 2) rimuove spazi, '/', '-'
+        String cleanData   = data.replaceAll("[\\s/\\\\-]", "");
+        // 3) tiene solo cifre
+        String cleanSessione = sessione.replaceAll("[^0-9]", "");
+
+        return cleanEvento + "_" + cleanData + "_" + cleanSessione + ".pdf";
+    }
+
+
+
+
 }
