@@ -20,8 +20,6 @@ import java.util.regex.Pattern;
 import static com.automator.model.services.EventoRow.toPDFName;
 
 public class LeaAutomationService {
-
-public class LeaAutomationService {
 	
 	// AGGIUNTA: Variabile di istanza per la lista degli eventi da Excel
     private List<EventoRow> listaEventiDaExcel;
