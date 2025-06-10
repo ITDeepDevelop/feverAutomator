@@ -3,19 +3,30 @@ package com.automator.model.services;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
-
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+
 import java.util.List;
 
-public class LeaAutomationService {
 
-    public boolean op1() {
+public class LeaAutomationService {
+	
+	// AGGIUNTA: Variabile di istanza per la lista degli eventi da Excel
+    private List<EventoRow> listaEventiDaExcel;
+
+    // Metodo setter per impostare la lista degli eventi caricati dall'UI
+    public void setListaEventiDaExcel(List<EventoRow> listaEventi) {
+        this.listaEventiDaExcel = listaEventi;
+    }
+	
+
+   /* public boolean op1(String email, String password) {
         // logica vera dell'operazione 1
         try (Playwright playwright = Playwright.create()) {
             Browser browser = playwright.chromium()
@@ -25,9 +36,17 @@ public class LeaAutomationService {
             BrowserContext context = browser.newContext();
             Page page = context.newPage();
 
-            page.navigate("https://example.com");
+            page.navigate("https://licence.soundreef.com/it/");
+            
+            allowCookies(page);
+            System.out.print(password + email + "op1");
+            loginProcedure(page,email,password);
+            runTo(page);
+            
+            
+            
             page.waitForTimeout(5000);
-
+             
             page.close();
             browser.close();
 
@@ -36,7 +55,401 @@ public class LeaAutomationService {
             e.printStackTrace();
             return false;
         }
+    }*/
+	
+	public boolean op1(String email, String password) {
+	    try {
+	        // PRIMA COSA: Carica i dati Excel
+	        System.out.println("Caricamento dati da Excel...");
+	        ExcelReader reader = new ExcelReader();
+	        
+	        // Verifica che il file Excel sia stato impostato
+	        if (ExcelStorage.getInstance().getFile() == null) {
+	            System.err.println("❌ Nessun file Excel caricato! Assicurati di aver selezionato un file Excel prima di avviare l'operazione.");
+	            return false;
+	        }
+	        
+	        // Leggi il file Excel
+	        reader.read(ExcelStorage.getInstance().getFile());
+	        
+	        // Carica tutti gli eventi dalla classe EventoRow
+	        this.listaEventiDaExcel = reader.getEventoRows();
+	        
+	        if (this.listaEventiDaExcel == null || this.listaEventiDaExcel.isEmpty()) {
+	            System.err.println("❌ Nessun evento trovato nel file Excel!");
+	            return false;
+	        }
+	        
+	        System.out.println("✅ Caricati " + this.listaEventiDaExcel.size() + " eventi da Excel");
+	        
+	       
+	        
+	        // Opzionale: stampa un riassunto degli eventi caricati
+	        System.out.println("📋 Primi eventi caricati:");
+	        for (int i = 0; i < Math.min(5, this.listaEventiDaExcel.size()); i++) {
+	            EventoRow evento = this.listaEventiDaExcel.get(i);
+	            System.out.println("  " + (i+1) + ". " + evento.getNomeEventoELocation() + 
+	                             " - " + evento.getCitta() + 
+	                             " (CAP: " + evento.getCap() + 
+	                             ", Capienza: " + evento.getCapienza() + ")");
+	        }
+	        if (this.listaEventiDaExcel.size() > 5) {
+	            System.out.println("  ... e altri " + (this.listaEventiDaExcel.size() - 5) + " eventi");
+	        }
+	        
+	    } catch (Exception e) {
+	        System.err.println("❌ Errore nel caricamento dei dati Excel: " + e.getMessage());
+	        e.printStackTrace();
+	        return false;
+	    }
+	    
+	    // SECONDA PARTE: Avvia l'automazione web
+	    try (Playwright playwright = Playwright.create()) {
+	        System.out.println("Avvio automazione web...");
+	        
+	        Browser browser = playwright.chromium()
+	                .launch(new BrowserType.LaunchOptions()
+	                        .setHeadless(false)
+	                );
+	        BrowserContext context = browser.newContext();
+	        Page page = context.newPage();
+
+	        page.navigate("https://licence.soundreef.com/it/");
+	        
+	        allowCookies(page);
+	        System.out.println("Credenziali: " + email);
+	        loginProcedure(page, email, password);
+	        runTo(page);
+	        
+	        page.waitForTimeout(5000);
+	         
+	        page.close();
+	        browser.close();
+
+	        return true;
+	    } catch (Exception e) {
+	        System.err.println("❌ Errore durante l'automazione web: " + e.getMessage());
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
+    
+    public void allowCookies(Page page)
+    {
+    
+    	try {
+            // Attende che il bottone dei cookie sia visibile
+            page.waitForSelector("#CybotCookiebotDialogBodyButtonAccept", new Page.WaitForSelectorOptions()
+                .setTimeout(10000));
+            
+            // Clicca sul bottone "Accetta tutti i cookie"
+            page.click("#CybotCookiebotDialogBodyButtonAccept");
+            
+            // Attende un momento per assicurarsi che il dialog si chiuda
+            page.waitForTimeout(1000);
+            
+        } catch (Exception e) {
+            System.out.println("Errore nell'accettazione dei cookie: " + e.getMessage());
+            // Non rilancia l'eccezione per non interrompere il flusso principale
+        }
+
     }
+    
+    public void loginProcedure(Page page, String email, String password)
+    {
+    	System.out.print(password + email);
+    	try {
+            // Step 1: Clicca sul link "Accedi"
+            page.waitForSelector("a[href='https://licence.soundreef.com/it/login']", new Page.WaitForSelectorOptions()
+                .setTimeout(10000));
+            
+            page.click("a[href='https://licence.soundreef.com/it/login']");
+            
+            // Attende che la pagina di login si carichi
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+            
+         // Step 2: Inserimento credenziali
+            // Attende che i campi di input siano visibili
+            page.waitForSelector("#username", new Page.WaitForSelectorOptions()
+                .setTimeout(5000));
+            page.waitForSelector("#password", new Page.WaitForSelectorOptions()
+                .setTimeout(5000));
+            
+         // Step 2: Inserimento credenziali
+            // Inserisci l'email e la password usando locator come nel tuo esempio SIAE
+            page.locator("#username").fill(email);
+            page.locator("#password").fill(password);
+            
+            page.waitForTimeout(1000); // Breve attesa per sicurezza
+
+            
+         // Step 3: Clicca sul bottone "Accedi"
+            page.waitForSelector("button[type='submit'].waves-effect.btn.orange.action", new Page.WaitForSelectorOptions()
+                .setTimeout(10000));
+            
+            page.click("button[type='submit'].waves-effect.btn.orange.action");
+            
+            // Attende che il login sia completato (la pagina cambi)
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+            
+            // Breve pausa per assicurarsi che i valori siano inseriti
+            page.waitForTimeout(1000);
+            
+            System.out.println("Credenziali inserite con successo");
+            
+            System.out.println("Navigazione verso la pagina di login completata");
+            
+        } catch (Exception e) {
+            System.out.println("Errore durante la procedura di login: " + e.getMessage());
+            throw new RuntimeException("Login fallito", e);
+        }
+    	
+    }
+    
+   /* private void runTo(Page page) {
+        try {
+        	
+        	
+            // Clicca sul link "Eventi da confermare"
+            page.waitForSelector("a:has-text('Eventi da confermare')");
+            page.click("a:has-text('Eventi da confermare')");
+            System.out.println("Cliccato su 'Eventi da confermare'");
+            
+            // Attende che la pagina degli eventi sia caricata
+            page.waitForSelector("a.box.rounded.license");
+            
+            // Itera sugli eventi
+            while (true) {
+                List<ElementHandle> eventi = page.querySelectorAll("a.box.rounded.license");
+                int numeroEventi = eventi.size();
+                System.out.println("Eventi trovati: " + numeroEventi);
+                for (int i = 0; i < numeroEventi; i++) {
+                    // Ricarica gli elementi ogni volta
+                    eventi = page.querySelectorAll("a.box.rounded.license");
+                    
+                    // Ottiene l'href dell'evento corrente
+                    String href = eventi.get(i).getAttribute("href");
+                    System.out.println("Apro evento: " + href);
+                    
+                    // Naviga all'evento
+                    page.navigate(href);
+                    
+                    // Attende che la pagina si carichi
+                    page.waitForLoadState();
+                    page.waitForTimeout(2000); // attende 2 secondi 
+                    
+                 // Crea un nuovo oggetto EventoRow
+                    EventoRow evento = new EventoRow();
+                    
+                    // Attendi il campo nome evento e leggilo
+                    page.waitForSelector("input#license_form_lm_event_name");
+                    String nomeEvento = page.inputValue("input#license_form_lm_event_name");
+                    System.out.println("Nome evento: " + nomeEvento);
+                    
+                    
+                    
+                 // Attendi il campo città
+                    page.waitForSelector("input#venue_city");
+                    
+                    // Legge la città
+                    String city = page.inputValue("input#venue_city");
+                    System.out.println("Città trovata: " + city);
+                    
+                   
+                    
+                    
+                    
+                 // Inserisci il CAP nel campo input dedicato
+                   /* page.fill("input#venue_postcode", cap);
+                    System.out.println("CAP inserito: " + cap);*/
+                    // Attendi 2s e torna indietro
+                    /*page.waitForTimeout(2000);
+                    // Torna indietro
+                    page.goBack();
+                    page.waitForSelector("a.box.rounded.license");
+                }
+
+                break; // esci dal ciclo dopo una sola iterazione per ora
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore in runTo: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }*/
+    
+    private void runTo(Page page) {
+        try {
+            // Clicca sul link "Eventi da confermare"
+            page.waitForSelector("a:has-text('Eventi da confermare')");
+            page.click("a:has-text('Eventi da confermare')");
+            System.out.println("Cliccato su 'Eventi da confermare'");
+            
+            // Attende che la pagina degli eventi sia caricata
+            page.waitForSelector("a.box.rounded.license");
+            
+            // Itera sugli eventi
+            while (true) {
+                List<ElementHandle> eventi = page.querySelectorAll("a.box.rounded.license");
+                int numeroEventi = eventi.size();
+                System.out.println("Eventi trovati: " + numeroEventi);
+                
+                for (int i = 0; i < numeroEventi; i++) {
+                    // Ricarica gli elementi ogni volta
+                    eventi = page.querySelectorAll("a.box.rounded.license");
+                    
+                    // Ottiene l'href dell'evento corrente
+                    String href = eventi.get(i).getAttribute("href");
+                    System.out.println("Apro evento: " + href);
+                    
+                    // Naviga all'evento
+                    page.navigate(href);
+                    
+                    // Attende che la pagina si carichi
+                    page.waitForLoadState();
+                    page.waitForTimeout(2000); // attende 2 secondi 
+                    
+                    // Leggi i dati dall'evento web
+                    page.waitForSelector("input#license_form_lm_event_name");
+                    String nomeEventoWeb = page.inputValue("input#license_form_lm_event_name");
+                    System.out.println("Nome evento dal web: " + nomeEventoWeb);
+                    
+                    page.waitForSelector("input#venue_city");
+                    String cittaWeb = page.inputValue("input#venue_city");
+                    System.out.println("Città dal web: " + cittaWeb);
+                    
+                    // Cerca l'evento corrispondente nei dati Excel
+                    EventoRow eventoCorrispondente = trovaEventoCorrispondente(nomeEventoWeb, cittaWeb);
+                    
+                    if (eventoCorrispondente != null) {
+                        System.out.println("Evento trovato nei dati Excel!");
+                        
+                        // Inserisci il CAP se presente nei dati Excel
+                        String cap = eventoCorrispondente.getCap();
+                        if (cap != null && !cap.trim().isEmpty()) {
+                            try {
+                                page.waitForSelector("input#venue_postcode", new Page.WaitForSelectorOptions().setTimeout(5000));
+                                page.fill("input#venue_postcode", cap.trim());
+                                System.out.println("CAP inserito: " + cap);
+                            } catch (Exception e) {
+                                System.out.println("Errore nell'inserimento del CAP: " + e.getMessage());
+                            }
+                        }
+                        
+                        // Inserisci la capienza se presente nei dati Excel
+                        String capienza = eventoCorrispondente.getCapienza();
+                        if (capienza != null && !capienza.trim().isEmpty()) {
+                        	try {
+                                // Usa il selettore corretto per il campo capienza
+                                page.waitForSelector("input#license_form_lm_venue_capacity", new Page.WaitForSelectorOptions().setTimeout(5000));
+                                page.fill("input#license_form_lm_venue_capacity", capienza.trim());
+                                System.out.println("Capienza inserita: " + capienza);
+                            } catch (Exception e) {
+                                System.out.println("Campo capienza non trovato o errore nell'inserimento: " + e.getMessage());
+                                // Fallback con selettore alternativo per name
+                                try {
+                                    page.waitForSelector("input[name='lm_venue_capacity']", new Page.WaitForSelectorOptions().setTimeout(2000));
+                                    page.fill("input[name='lm_venue_capacity']", capienza.trim());
+                                    System.out.println("Capienza inserita (campo alternativo): " + capienza);
+                                } catch (Exception e2) {
+                                    System.out.println("Nessun campo capienza trovato");
+                                }
+                            }
+                        }
+                        
+                        // Opzionale: salva le modifiche se c'è un pulsante di salvataggio
+                        try {
+                            // Cerca un pulsante di salvataggio (dovrai verificare il selettore corretto)
+                           /* page.waitForSelector("button[type='submit'], input[type='submit'], button:has-text('Salva')", 
+                                               new Page.WaitForSelectorOptions().setTimeout(3000));
+                            page.click("button[type='submit'], input[type='submit'], button:has-text('Salva')");
+                            System.out.println("Modifiche salvate");
+                            page.waitForTimeout(2000);*/
+                        } catch (Exception e) {
+                            System.out.println("Nessun pulsante di salvataggio trovato o errore nel salvataggio: " + e.getMessage());
+                        }
+                        
+                    } else {
+                        System.out.println("Evento non trovato nei dati Excel per: " + nomeEventoWeb + " - " + cittaWeb);
+                    }
+                    
+                    // Attendi e torna indietro
+                    page.waitForTimeout(2000);
+                    page.goBack();
+                    page.waitForSelector("a.box.rounded.license");
+                }
+
+                break; // esci dal ciclo dopo una sola iterazione per ora
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore in runTo: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Trova l'evento corrispondente nei dati Excel basandosi su nome evento e città
+     */
+    private EventoRow trovaEventoCorrispondente(String nomeEventoWeb, String cittaWeb) {
+        if (listaEventiDaExcel == null || listaEventiDaExcel.isEmpty()) {
+            System.out.println("Lista eventi da Excel non disponibile");
+            return null;
+        }
+        
+        for (EventoRow evento : listaEventiDaExcel) {
+            // Confronta il nome dell'evento (gestisce il caso in cui il nome Excel contenga " - Location")
+            String nomeEventoExcel = evento.getNomeEventoELocation();
+            if (nomeEventoExcel != null) {
+                // Estrae solo la parte del nome evento (prima del " - ")
+                int separatorIndex = nomeEventoExcel.indexOf(" - ");
+                if (separatorIndex != -1) {
+                    nomeEventoExcel = nomeEventoExcel.substring(0, separatorIndex);
+                }
+                
+                // Confronta nome evento e città (case-insensitive e trim)
+                boolean nomeMatch = nomeEventoWeb != null && 
+                                   nomeEventoWeb.trim().equalsIgnoreCase(nomeEventoExcel.trim());
+                boolean cittaMatch = cittaWeb != null && evento.getCitta() != null && 
+                                    cittaWeb.trim().equalsIgnoreCase(evento.getCitta().trim());
+                
+                if (nomeMatch && cittaMatch) {
+                    return evento;
+                }
+            }
+        }
+        
+        // Se non trova una corrispondenza esatta, prova una ricerca più flessibile
+        for (EventoRow evento : listaEventiDaExcel) {
+            String nomeEventoExcel = evento.getNomeEventoELocation();
+            if (nomeEventoExcel != null && cittaWeb != null && evento.getCitta() != null) {
+                // Controllo se il nome dell'evento web è contenuto nel nome Excel
+                boolean nomeContains = nomeEventoExcel.toLowerCase().contains(nomeEventoWeb.toLowerCase().trim()) ||
+                                      nomeEventoWeb.toLowerCase().contains(nomeEventoExcel.toLowerCase().trim());
+                boolean cittaMatch = cittaWeb.trim().equalsIgnoreCase(evento.getCitta().trim());
+                
+                if (nomeContains && cittaMatch) {
+                    System.out.println("Trovata corrispondenza parziale per nome evento");
+                    return evento;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    
+    
+
+
+
+ 
+
+    
+    
+
+
+    
 
     public boolean downloadLicense( String email, String password, String month, String year) {
         int maxAttempts = 2;
