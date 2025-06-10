@@ -136,7 +136,7 @@ public class SiaePage extends BorderPane {
         Label operationsTitle = new Label("Operazioni Disponibili");
         operationsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         
-        HBox op1 = createOperationBox("Operazione 1", "#3498db", "Operazione di test");
+        HBox op1 = createOperationBox("Crea Permessi", "#3498db", "Operazione di test");
         HBox op2 = createOperationBox("Accettazione Permessi", "#27ae60", "Accetta automaticamente tutti i permessi");
         HBox op3 = createOperationBox("Assegna Bordero", "#e67e22", "Assegnazione bordero agli eventi");
         HBox op4 = createOperationBox("Riconsegna Bordero", "#9b59b6", "Gestione riconsegna bordero");
@@ -204,7 +204,7 @@ public class SiaePage extends BorderPane {
 
         // Aggiungi gli event handler per i pulsanti
         switch (operationName) {
-            case "Operazione 1":
+            case "Crea Permessi":
                 actionButton.setOnAction(e -> executeOperation1(statusIcon));
                 break;
             case "Accettazione Permessi":
@@ -257,8 +257,10 @@ public class SiaePage extends BorderPane {
     // Metodi di esempio per le operazioni (aggiorna questi con la tua logica)
     private void executeOperation1(Circle statusIcon) {
         updateStatusIcon(statusIcon, "running");
+        String email = emailField.getText();
+        String password = passwordField.getText();
         // Esegui operazione 1
-        boolean success = siaeController.handleOperation("Operazione 1", null, null);
+        boolean success = siaeController.handleOperation("Richiesta permesso per un evento", email, password);
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 

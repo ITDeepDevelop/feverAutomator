@@ -23,14 +23,22 @@ public class ExcelPage extends BorderPane {
     private final Label fileNameLabel;
 
     public ExcelPage() {
-        // Header
-        Label headerLabel = new Label("Gestione File Excel");
-        headerLabel.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-
-        VBox header = new VBox(headerLabel);
+    	// Header migliorato
+        Label headerLabel = new Label("Gestione file EXCEL");
+        headerLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        
+        Label subtitleLabel = new Label("Caricamento ed eliminazione");
+        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d;");
+        
+        VBox header = new VBox(5, headerLabel, subtitleLabel);
+        header.setPadding(new Insets(25, 20, 25, 20));
         header.setAlignment(Pos.CENTER);
-        header.setPadding(new Insets(25, 0, 25, 0));
-        header.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-border-width: 0 0 1 0;");
+        header.setStyle("-fx-background-color: linear-gradient(to right, #3498db, #2980b9); " +
+                       "-fx-background-radius: 8;");
+        // Cambia il colore del testo per il gradiente blu
+        headerLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: white;");
+        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #ecf0f1;");
+        
         this.setTop(header);
 
         // Tabella centrale

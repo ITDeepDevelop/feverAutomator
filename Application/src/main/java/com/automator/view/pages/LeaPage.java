@@ -37,7 +37,7 @@ public class LeaPage extends BorderPane {
         Label headerLabel = new Label("Operazioni LEA");
         headerLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         
-        Label subtitleLabel = new Label("Gestione automatizzata *POI VEDIAMO DI COSA*");
+        Label subtitleLabel = new Label("Gestione automatizzata di eventi e licenze");
         subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d;");
         
         VBox header = new VBox(5, headerLabel, subtitleLabel);
@@ -145,7 +145,7 @@ public class LeaPage extends BorderPane {
         Label operationsTitle = new Label("Operazioni Disponibili");
         operationsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         
-        HBox op1 = createOperationBox("Operazione 1", "#3498db", "Operazione di test");
+        HBox op1 = createOperationBox("Conferma Evento", "#3498db", "Conferma degli eventi");
         HBox op2 = createOperationBox("Download Licenza", "#27ae60", "Scarica il PDF di una licenza");
 
         VBox operationsBox = new VBox(15);
@@ -253,7 +253,7 @@ public class LeaPage extends BorderPane {
 
         // Aggiungi gli event handler per i pulsanti
         switch (operationName) {
-            case "Operazione 1":
+            case "Conferma Evento":
                 actionButton.setOnAction(e -> executeOperation1(statusIcon));
                 break;
             case "Download Licenza":
@@ -301,7 +301,9 @@ public class LeaPage extends BorderPane {
     private void executeOperation1(Circle statusIcon) {
         updateStatusIcon(statusIcon, "running");
         // Esegui operazione 1
-        boolean success = leaController.handleOperation("Op1", null, null, null, null);
+        String email = emailField.getText();
+        String password = passwordField.getText();
+        boolean success = leaController.handleOperation("Conferma Evento", email, password, null, null);
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
