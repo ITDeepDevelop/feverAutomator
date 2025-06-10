@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 import static com.automator.model.services.EventoRow.toPDFName;
 
 public class LeaAutomationService {
-V
 
 public class LeaAutomationService {
 	
