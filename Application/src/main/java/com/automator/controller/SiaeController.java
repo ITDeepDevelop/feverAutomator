@@ -12,7 +12,7 @@ public class SiaeController {
     public boolean handleOperation(String operationName, String email, String password) {
         switch (operationName) {
             case "Richiesta permesso per un evento":
-                return siaeService.runOperation1();
+                return siaeService.nuoviPermessi(email,password);
             case "Accettazione Permessi":
                 return siaeService.licenseCheck(email,password);
             case "Assegna Bordero":

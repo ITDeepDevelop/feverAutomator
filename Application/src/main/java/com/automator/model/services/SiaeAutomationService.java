@@ -30,7 +30,7 @@ import javafx.collections.ObservableList;
 public class SiaeAutomationService {
 	
 	
-	 public boolean runOperation1() {
+	 public boolean nuoviPermessi(String email, String password) {
 		
 		 ExcelReader reader = new ExcelReader();
 		 
@@ -52,8 +52,8 @@ public class SiaeAutomationService {
 	                page.navigate("https://www.siae.it/it/");
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("ACCETTO")).click();
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi").setExact(true)).click();
-	                page.locator("input[type=\"text\"]").fill("originals_italy@feverup.com");
-	                page.locator("input[type=\"password\"]").fill("Siae@123");
+	                page.locator("input[type=\"text\"]").fill(email);
+	                page.locator("input[type=\"password\"]").fill(password);
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
 	               
 	           
@@ -65,7 +65,7 @@ public class SiaeAutomationService {
 	             // 3. Nuovo permesso
 	                page.waitForSelector("text=Nuovo Permesso");
 	                page.getByText("Nuovo Permesso").click();
-	                
+	                int j = 0;
 	              for(EventoRow evento: eventlist ) {
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
@@ -104,8 +104,9 @@ public class SiaeAutomationService {
 	                // Clicca sull'opzione del genere mappato
 	                page.locator("li:has-text('" + genereEvento + "')").click();
 
+
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	          
+	                
 	           
 	             // 6 Data evento   
 	                try {
@@ -179,59 +180,60 @@ public class SiaeAutomationService {
 	                
 	             // 7 Descrizione 
 	                page.locator("input[name='furtherInfo']").fill(evento.getNomeEventoELocation());
-	               
+	                Locator checkbox = page.locator("label:has-text('Sono in possesso di licenza OGC') input[type='checkbox']");
+	                checkbox.click();
+	                
+	                
+	                System.out.println("⏳ Attendo che l’utente carichi un PDF nella sezione documenti...");
+
+	             // Cambia il selettore qui sotto con quello corretto (es. nome file, estensione, classe ecc.)
+	             page.waitForSelector("text=.pdf", new Page.WaitForSelectorOptions().setTimeout(3000000)); // 5 min max
+
+	             System.out.println("✅ PDF rilevato! Continuo con l’automazione...");
+	             
+	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	          
+	                
 	                Locator dropdown = page.locator("div#outlined-select");
 	                dropdown.click(new Locator.ClickOptions().setForce(true));
 
-	                // 2. Aspetta che la lista sia visibile
-	             page.waitForSelector("ul[role='listbox']");
-	             
-	             	// 3. Clicca sulla voce corretta del menu
-	             page.locator("li:has-text('Tutti i brani non tutelati o di pubblico dominio')").click();
+	                // Aspetta che l'opzione "No" sia visibile
+	                page.waitForSelector("ul[role='listbox'] li[role='option']");
 
+	                // Clicca su "No" in modo preciso usando getByRole con setExact
+	                page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions()
+	                    .setName("No")
+	                    .setExact(true)
+	                ).click();
+	             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
+	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                page.pause();
-	              } 
+	                page.pause();	
+	                /*
+	                try {	
+	                    // Hover sul pulsante esatto "Permessi" usando selettore preciso
+	                    Locator menuPermessi = page.locator("button[aria-controls='simple-menu'] >> text=Permessi");
+	                    menuPermessi.hover();
+	                    page.waitForTimeout(500); // tempo per far apparire il dropdown
+
+	                    // Clic su "Aggiungi Permesso"
+	                    Locator aggiungiPermesso = page.locator("text=Aggiungi Permesso");
+	                    aggiungiPermesso.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+	                    aggiungiPermesso.click();
+
+	                    System.out.println("✅ Cliccato su 'Aggiungi Permesso'");
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore durante il click su 'Aggiungi Permesso': " + e.getMessage());
+	                }
+
+					System.out.println("▶ Elaborazione evento " + (j + 1) + " di " + eventlist.size());
+	              */
+	              }
 	            page.close();
 	            browser.close();
 	            return true;
 	      
 	    }
-
-/*
-    public List<EventoSiaeRow> estraiEventiDaExcel(ExcelTableView excelView) {
-        List<EventoSiaeRow> eventi = new ArrayList<>();
-        ObservableList<ObservableList<String>> righe = excelView.getTable().getItems();
-
-
-        for (ObservableList<String> riga : righe) {
-            // Stampa per debug
-            System.out.println("🔍 Riga Excel: " + riga);
-
-            // Verifica che la riga abbia abbastanza colonne
-            if (riga.size() < 10) {
-                System.err.println("⚠ Riga ignorata (colonne insufficienti): " + riga.size());
-                continue;
-            }
-
-            EventoSiaeRow evento = new EventoSiaeRow(
-            	    riga.get(0), // city
-            	    riga.get(1), // address
-            	    riga.get(2), // category
-            	    riga.get(3), // subCategory
-            	    riga.get(4), // date
-            	    riga.get(5), // timeFrom
-            	    riga.get(6), // timeTo
-            	    riga.get(7), // ticketType
-            	    riga.get(8), // description
-            	    riga.get(9)  // musicType
-            	);
-
-            eventi.add(evento);
-        }
-
-        return eventi;
-    }*/
 
    // }
     /*
