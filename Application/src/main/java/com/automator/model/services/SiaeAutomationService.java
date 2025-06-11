@@ -713,19 +713,24 @@ public class SiaeAutomationService {
         page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
         System.out.println(data);
         System.out.println(localeSpazio);
+        String emailToFill = "";
         try {
             ExcelReader reader = new ExcelReader();
             reader.read(ExcelStorage.getInstance().getFile());
-            String emailToFill = reader.getValueByTwoKeys("Data evento",data, "Nome location",localeSpazio,"E-mail");
+            emailToFill = reader.getValueByTwoKeys("Data evento",data, "Nome location",localeSpazio,"E-mail");
+            if(emailToFill.isEmpty()){
+                System.out.println("Email non presente nel file excel");
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+                return;
+            }
             page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
-            //page.waitForTimeout(10000);
         } catch (Exception e) {
             e.printStackTrace();
         }
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
         page.waitForTimeout(1000);
 
-        Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName("rodella.et@gmail.com"));
+        Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName(emailToFill));
 
         if (cell.count() > 0 && cell.first().isVisible()) {
             System.out.println("✔ Email trovata nella tabella");
@@ -735,7 +740,7 @@ public class SiaeAutomationService {
         } else {
             System.out.println("❌ Email non trovata, inserimento manuale");
             page.getByText("Non hai trovato il direttore").click();
-            page.getByRole(AriaRole.TEXTBOX).fill("asdsad@adas.it");
+            page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
             // TODO: click su "Conferma"
