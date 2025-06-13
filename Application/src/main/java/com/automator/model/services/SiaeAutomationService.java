@@ -41,7 +41,9 @@ public class SiaeAutomationService {
 			e.printStackTrace();
 		}
 		 System.out.print("TEST");
-		 List <EventoRow> eventlist = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
+		 List <EventoRow> eventlistBasic = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
+		// Metodo per splittare im base alle sessioni
+		 List <EventoRow> eventlist= EventoRow.espandiEventiConSessioni(eventlistBasic);
 
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
