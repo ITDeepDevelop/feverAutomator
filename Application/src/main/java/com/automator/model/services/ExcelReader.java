@@ -125,6 +125,7 @@ public class ExcelReader {
             evento.setCap(row.getOrDefault("Cap", ""));
             evento.setCapienza(row.getOrDefault("Capienza", ""));
             evento.setEmail(row.getOrDefault("E-mail", ""));
+            evento.setSala(row.getOrDefault("Sala", ""));
             eventi.add(evento);
         }
         return eventi;
