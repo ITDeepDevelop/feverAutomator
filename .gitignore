@@ -1,2 +1,9 @@
 .idea/vcs.xml
 /Application/target/
+Application/dependency-reduced-pom.xml
+Application/.settings/org.eclipse.jdt.core.prefs
+Application/.project
+Application/.DS_Store
+Application/.classpath
+.project
+.DS_Store
