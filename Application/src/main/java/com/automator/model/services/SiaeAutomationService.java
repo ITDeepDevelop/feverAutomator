@@ -41,8 +41,8 @@ public class SiaeAutomationService {
 			e.printStackTrace();
 		}
 		 System.out.print("TEST");
-		 List <EventoRow> eventlist = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
-
+		 List<EventoRow> eventiOriginali = reader.getEventiByLocationECitta("Teatro Litta","Milano");
+		 List<EventoRow> eventlist = espandiEventiConSessioni(eventiOriginali);
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
 	            BrowserContext context = browser.newContext();
@@ -67,6 +67,7 @@ public class SiaeAutomationService {
 	                page.getByText("Nuovo Permesso").click();
 	                int j = 0;
 	              for(EventoRow evento: eventlist ) {
+	            	  
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
 	            	page.locator("input[placeholder='Città']").click();
@@ -135,44 +136,24 @@ public class SiaeAutomationService {
 	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
 	                    e.printStackTrace();
 	                }
-
 	                // 7. Fasce orarie da Excel
-	                try {
-	                    String sessioni = evento.getSessioni(); // Es. "20:00H & 22:00H"
-	                    String[] orari = sessioni.replace("H", "").split("&");
-	                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+	                try	 {
+	                    String orarioInizio = evento.getSessioni().replace("H", "").trim();
+	                    LocalTime inizio = LocalTime.parse(orarioInizio, DateTimeFormatter.ofPattern("HH:mm"));
+	                    LocalTime fine = inizio.plusHours(1);
+	                    String orarioFine = fine.format(DateTimeFormatter.ofPattern("HH:mm"));
 
-	                    for (int i = 0; i < orari.length; i++) {
-	                        String orarioInizio = orari[i].trim();
+	                    page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
+	                    page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
 
-	                        LocalTime inizio = LocalTime.parse(orarioInizio, timeFormatter);
-	                        LocalTime fine = inizio.plusHours(1);
-	                        String orarioFine = fine.format(timeFormatter);
+	                    page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(0).click();
+	                    page.waitForSelector("ul[role='listbox']");
+	                    page.locator("li:has-text('Ingresso a pagamento')").click();
 
-	                        if (i == 0) {
-	                            page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
-	                            page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
-
-	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
-	                            page.waitForSelector("ul[role='listbox']");
-	                            page.locator("li:has-text('Ingresso a pagamento')").click();
-	                        } else {
-	                            page.getByText("Aggiungi").click();
-	                            page.waitForTimeout(500);
-
-	                            page.locator("input[placeholder='hh:mm']").nth(i * 2).fill(orarioInizio);
-	                            page.locator("input[placeholder='hh:mm']").nth(i * 2 + 1).fill(orarioFine);
-
-	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
-	                            page.waitForSelector("ul[role='listbox']");
-	                            page.locator("li:has-text('Ingresso a pagamento')").click();
-	                        }
-	                    }
 	                } catch (Exception e) {
 	                    System.err.println("❌ Errore nella gestione delle sessioni orarie: " + e.getMessage());
 	                    e.printStackTrace();
 	                }
-	               
 
 	           
 	       
@@ -183,13 +164,35 @@ public class SiaeAutomationService {
 	                Locator checkbox = page.locator("label:has-text('Sono in possesso di licenza OGC') input[type='checkbox']");
 	                checkbox.click();
 	                
-	                
-	                System.out.println("⏳ Attendo che l’utente carichi un PDF nella sezione documenti...");
+	            // carica PDF
+	                try {
+	                    String nomeEvento = evento.getNomeEventoELocation().replaceAll("[^a-zA-Z0-9]", "");
+	                    String dataEvento = evento.getDataEvento(); // es. "02/07/2025"
+	                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+	                    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dMMMu", Locale.ITALIAN); // es. 2lug2025
 
-	             // Cambia il selettore qui sotto con quello corretto (es. nome file, estensione, classe ecc.)
-	             page.waitForSelector("text=.pdf", new Page.WaitForSelectorOptions().setTimeout(3000000)); // 5 min max
+	                    LocalDate data = LocalDate.parse(dataEvento, inputFormatter);
+	                    String dataFormattata = data.format(outputFormatter).toLowerCase().replaceAll("\\.", "");
 
-	             System.out.println("✅ PDF rilevato! Continuo con l’automazione...");
+	                    String orario = evento.getSessioni().replace("H", "").replace(":", ""); // es. 1800
+	                    String nomeFilePDF = nomeEvento + "_" + dataFormattata + "_" + orario + ".pdf";
+
+	                 // Percorso dinamico Desktop > LeaDownloads
+	                    String userHome = System.getProperty("user.home");
+	                    Path cartellaPDF = Paths.get(userHome, "Desktop", "LeaDownloads");
+	                    Path pathPDF = cartellaPDF.resolve(nomeFilePDF);
+	                    
+	                    if (!Files.exists(pathPDF)) {
+	                        System.err.println("❌ File PDF non trovato: " + pathPDF.toString());
+	                    } else {
+	                        System.out.println("📎 Carico PDF: " + pathPDF.toString());
+	                        page.setInputFiles("input[type='file']", pathPDF);
+	                        page.waitForSelector("text=" + nomeFilePDF);
+	                        System.out.println("✅ PDF caricato con successo");
+	                    }
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nel caricamento del PDF: " + e.getMessage());
+	                }
 	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	          
@@ -1108,6 +1111,33 @@ public class SiaeAutomationService {
                    lower.contains("pugilato") || lower.contains("rugby") || lower.contains("invernali") ||
                    lower.contains("tennis") || lower.contains("sport");
         }
+    }
+    public static List<EventoRow> espandiEventiConSessioni(List<EventoRow> originali) {
+        List<EventoRow> espansi = new ArrayList<>();
+        for (EventoRow evento : originali) {
+            String sessioni = evento.getSessioni();
+            if (sessioni != null && sessioni.contains("&")) {
+                String[] orari = sessioni.replace("H", "").split("&");
+                for (String orario : orari) {
+                    EventoRow copia = new EventoRow(
+                        evento.getNomeEventoELocation(),
+                        evento.getCodiceSpettacoloGenere(),
+                        evento.getDataEvento(),
+                        orario.trim() + "H", // solo 1 orario per riga
+                        evento.getNomeLocation(),
+                        evento.getIndirizzo(),
+                        evento.getCitta(),
+                        evento.getCap(),
+                        evento.getCapienza(),
+                        evento.getEmail()
+                    );
+                    espansi.add(copia);
+                }
+            } else {
+                espansi.add(evento);
+            }
+        }
+        return espansi;
     }
 
 }
