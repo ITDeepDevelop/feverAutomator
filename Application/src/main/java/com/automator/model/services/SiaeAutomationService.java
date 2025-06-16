@@ -42,7 +42,7 @@ public class SiaeAutomationService {
 		}
 		 System.out.print("TEST");
 		 List<EventoRow> eventiOriginali = reader.getEventiByLocationECitta("Teatro Litta","Milano");
-		 List<EventoRow> eventlist = espandiEventiConSessioni(eventiOriginali);
+		 List<EventoRow> eventlist = EventoRow.espandiEventiConSessioni(eventiOriginali);
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
 	            BrowserContext context = browser.newContext();
@@ -166,17 +166,11 @@ public class SiaeAutomationService {
 	                
 	            // carica PDF
 	                try {
-	                    String nomeEvento = evento.getNomeEventoELocation().replaceAll("[^a-zA-Z0-9]", "");
-	                    String dataEvento = evento.getDataEvento(); // es. "02/07/2025"
-	                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-	                    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dMMMu", Locale.ITALIAN); // es. 2lug2025
-
-	                    LocalDate data = LocalDate.parse(dataEvento, inputFormatter);
-	                    String dataFormattata = data.format(outputFormatter).toLowerCase().replaceAll("\\.", "");
-
-	                    String orario = evento.getSessioni().replace("H", "").replace(":", ""); // es. 1800
-	                    String nomeFilePDF = nomeEvento + "_" + dataFormattata + "_" + orario + ".pdf";
-
+	                	  String nomeFilePDF = EventoRow.toPDFName(
+	                		        evento.getNomeEventoELocation(),
+	                		        evento.getDataEvento(),
+	                		        evento.getSessioni()
+	                		    );
 	                 // Percorso dinamico Desktop > LeaDownloads
 	                    String userHome = System.getProperty("user.home");
 	                    Path cartellaPDF = Paths.get(userHome, "Desktop", "LeaDownloads");
@@ -716,19 +710,24 @@ public class SiaeAutomationService {
         page.getByRole(AriaRole.TAB, new Page.GetByRoleOptions().setName("E-mail")).click();
         System.out.println(data);
         System.out.println(localeSpazio);
+        String emailToFill = "";
         try {
             ExcelReader reader = new ExcelReader();
             reader.read(ExcelStorage.getInstance().getFile());
-            String emailToFill = reader.getValueByTwoKeys("Data evento",data, "Nome location",localeSpazio,"E-mail");
+            emailToFill = reader.getValueByTwoKeys("Data evento",data, "Nome location",localeSpazio,"E-mail");
+            if(emailToFill.isEmpty()){
+                System.out.println("Email non presente nel file excel");
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+                return;
+            }
             page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
-            //page.waitForTimeout(10000);
         } catch (Exception e) {
             e.printStackTrace();
         }
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cerca")).click();
         page.waitForTimeout(1000);
 
-        Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName("rodella.et@gmail.com"));
+        Locator cell = page.getByRole(AriaRole.CELL, new Page.GetByRoleOptions().setName(emailToFill));
 
         if (cell.count() > 0 && cell.first().isVisible()) {
             System.out.println("✔ Email trovata nella tabella");
@@ -738,7 +737,7 @@ public class SiaeAutomationService {
         } else {
             System.out.println("❌ Email non trovata, inserimento manuale");
             page.getByText("Non hai trovato il direttore").click();
-            page.getByRole(AriaRole.TEXTBOX).fill("asdsad@adas.it");
+            page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
             // TODO: click su "Conferma"
@@ -1111,33 +1110,6 @@ public class SiaeAutomationService {
                    lower.contains("pugilato") || lower.contains("rugby") || lower.contains("invernali") ||
                    lower.contains("tennis") || lower.contains("sport");
         }
-    }
-    public static List<EventoRow> espandiEventiConSessioni(List<EventoRow> originali) {
-        List<EventoRow> espansi = new ArrayList<>();
-        for (EventoRow evento : originali) {
-            String sessioni = evento.getSessioni();
-            if (sessioni != null && sessioni.contains("&")) {
-                String[] orari = sessioni.replace("H", "").split("&");
-                for (String orario : orari) {
-                    EventoRow copia = new EventoRow(
-                        evento.getNomeEventoELocation(),
-                        evento.getCodiceSpettacoloGenere(),
-                        evento.getDataEvento(),
-                        orario.trim() + "H", // solo 1 orario per riga
-                        evento.getNomeLocation(),
-                        evento.getIndirizzo(),
-                        evento.getCitta(),
-                        evento.getCap(),
-                        evento.getCapienza(),
-                        evento.getEmail()
-                    );
-                    espansi.add(copia);
-                }
-            } else {
-                espansi.add(evento);
-            }
-        }
-        return espansi;
     }
 
 }
