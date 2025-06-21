@@ -41,7 +41,7 @@ public class SiaeAutomationService {
 			e.printStackTrace();
 		}
 		 System.out.print("TEST");
-		 List<EventoRow> eventiOriginali = reader.getEventiByLocationECitta("Teatro Litta","Milano");
+		 List<EventoRow> eventiOriginali = reader.getEventoRows();
 		 List<EventoRow> eventlist = EventoRow.espandiEventiConSessioni(eventiOriginali);
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
@@ -66,8 +66,11 @@ public class SiaeAutomationService {
 	                page.waitForSelector("text=Nuovo Permesso");
 	                page.getByText("Nuovo Permesso").click();
 	                int j = 0;
+	                
 	              for(EventoRow evento: eventlist ) {
-	            	  
+	            	  if (evento.getNomeLocation().isEmpty()) {
+	            		  break;
+	            	  }
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
 	            	page.locator("input[placeholder='Città']").click();
@@ -81,7 +84,30 @@ public class SiaeAutomationService {
 	                page.locator("input[placeholder='Locale / Indirizzo']").fill(evento.getNomeLocation());
 	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getNomeLocation());
 	                page.keyboard().press("ArrowDown");
-	                page.keyboard().press("Enter");
+	                page.keyboard().press("Enter"); 
+	                
+	             // Clicca sul dropdown "Spazio/Sala"
+	              /*  page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')").click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('" + evento.getSala() + "')").click();
+					*/
+	             // Clicca sul dropdown "Spazio/Sala"
+	                try {
+	                    Locator dropdownSala = page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')");
+	                    dropdownSala.click();
+	                    page.waitForSelector("ul[role='listbox']");
+
+	                    Locator salaDesiderata = page.locator("li:has-text('" + evento.getSala() + "')");
+	                    if (salaDesiderata.count() > 0) {
+	                        salaDesiderata.click();
+	                        System.out.println("🏛️ Sala selezionata: " + evento.getSala());
+	                    } else {
+	                        System.out.println("⚠️ Sala '" + evento.getSala() + "' non disponibile. Uso quella predefinita.");
+	                        // Puoi anche non fare nulla qui se "spazio predefinito" va bene
+	                    }
+	                } catch (Exception e) {
+	                    System.out.println("⚠️ Errore durante la selezione della sala. Uso quella predefinita.");
+	                }
 
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                
@@ -205,26 +231,24 @@ public class SiaeAutomationService {
 	             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                page.pause();	
-	                /*
-	                try {	
-	                    // Hover sul pulsante esatto "Permessi" usando selettore preciso
-	                    Locator menuPermessi = page.locator("button[aria-controls='simple-menu'] >> text=Permessi");
-	                    menuPermessi.hover();
-	                    page.waitForTimeout(500); // tempo per far apparire il dropdown
+	                
+	                try {
+	                    // Torna alla home del portale organizzatori
+	                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Portale Organizzatori Professionali")).click();
+	                    page.waitForTimeout(1000);
+	                    // Attendi il popup di conferma e clicca su "CONFERMA"
+	                    page.waitForSelector("button:has-text('CONFERMA')", new Page.WaitForSelectorOptions().setTimeout(5000));
+	                    page.locator("button:has-text('CONFERMA')").click();
+	                    // Clicca nuovamente su "Nuovo Permesso"
+	                    page.waitForSelector("text=Nuovo Permesso", new Page.WaitForSelectorOptions().setTimeout(5000));
+	                    page.getByText("Nuovo Permesso").click();
 
-	                    // Clic su "Aggiungi Permesso"
-	                    Locator aggiungiPermesso = page.locator("text=Aggiungi Permesso");
-	                    aggiungiPermesso.waitFor(new Locator.WaitForOptions().setTimeout(5000));
-	                    aggiungiPermesso.click();
-
-	                    System.out.println("✅ Cliccato su 'Aggiungi Permesso'");
+	                    System.out.println("🔄 Tornato al menu iniziale per il prossimo evento...");
 	                } catch (Exception e) {
-	                    System.err.println("❌ Errore durante il click su 'Aggiungi Permesso': " + e.getMessage());
+	                    System.err.println("❌ Errore nel tornare al menu principale per il prossimo evento: " + e.getMessage());
 	                }
-
+	           
 					System.out.println("▶ Elaborazione evento " + (j + 1) + " di " + eventlist.size());
-	              */
 	              }
 	            page.close();
 	            browser.close();
