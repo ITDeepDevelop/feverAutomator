@@ -41,10 +41,8 @@ public class SiaeAutomationService {
 			e.printStackTrace();
 		}
 		 System.out.print("TEST");
-		 List <EventoRow> eventlistBasic = reader.getEventiByLocationECitta("Teatro Litta","Milano") ;
-		// Metodo per splittare im base alle sessioni
-		 List <EventoRow> eventlist= EventoRow.espandiEventiConSessioni(eventlistBasic);
-
+		 List<EventoRow> eventiOriginali = reader.getEventoRows();
+		 List<EventoRow> eventlist = EventoRow.espandiEventiConSessioni(eventiOriginali);
 	        Playwright playwright = Playwright.create();
 	            Browser browser = launchBrowser(playwright);
 	            BrowserContext context = browser.newContext();
@@ -68,7 +66,11 @@ public class SiaeAutomationService {
 	                page.waitForSelector("text=Nuovo Permesso");
 	                page.getByText("Nuovo Permesso").click();
 	                int j = 0;
+	                
 	              for(EventoRow evento: eventlist ) {
+	            	  if (evento.getNomeLocation().isEmpty()) {
+	            		  break;
+	            	  }
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
 	            	page.locator("input[placeholder='Città']").click();
@@ -82,7 +84,30 @@ public class SiaeAutomationService {
 	                page.locator("input[placeholder='Locale / Indirizzo']").fill(evento.getNomeLocation());
 	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getNomeLocation());
 	                page.keyboard().press("ArrowDown");
-	                page.keyboard().press("Enter");
+	                page.keyboard().press("Enter"); 
+	                
+	             // Clicca sul dropdown "Spazio/Sala"
+	              /*  page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')").click();
+	                page.waitForSelector("ul[role='listbox']");
+	                page.locator("li:has-text('" + evento.getSala() + "')").click();
+					*/
+	             // Clicca sul dropdown "Spazio/Sala"
+	                try {
+	                    Locator dropdownSala = page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')");
+	                    dropdownSala.click();
+	                    page.waitForSelector("ul[role='listbox']");
+
+	                    Locator salaDesiderata = page.locator("li:has-text('" + evento.getSala() + "')");
+	                    if (salaDesiderata.count() > 0) {
+	                        salaDesiderata.click();
+	                        System.out.println("🏛️ Sala selezionata: " + evento.getSala());
+	                    } else {
+	                        System.out.println("⚠️ Sala '" + evento.getSala() + "' non disponibile. Uso quella predefinita.");
+	                        // Puoi anche non fare nulla qui se "spazio predefinito" va bene
+	                    }
+	                } catch (Exception e) {
+	                    System.out.println("⚠️ Errore durante la selezione della sala. Uso quella predefinita.");
+	                }
 
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                
@@ -137,44 +162,24 @@ public class SiaeAutomationService {
 	                    System.err.println("❌ Errore nella selezione della data: " + e.getMessage());
 	                    e.printStackTrace();
 	                }
-
 	                // 7. Fasce orarie da Excel
-	                try {
-	                    String sessioni = evento.getSessioni(); // Es. "20:00H & 22:00H"
-	                    String[] orari = sessioni.replace("H", "").split("&");
-	                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+	                try	 {
+	                    String orarioInizio = evento.getSessioni().replace("H", "").trim();
+	                    LocalTime inizio = LocalTime.parse(orarioInizio, DateTimeFormatter.ofPattern("HH:mm"));
+	                    LocalTime fine = inizio.plusHours(1);
+	                    String orarioFine = fine.format(DateTimeFormatter.ofPattern("HH:mm"));
 
-	                    for (int i = 0; i < orari.length; i++) {
-	                        String orarioInizio = orari[i].trim();
+	                    page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
+	                    page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
 
-	                        LocalTime inizio = LocalTime.parse(orarioInizio, timeFormatter);
-	                        LocalTime fine = inizio.plusHours(1);
-	                        String orarioFine = fine.format(timeFormatter);
+	                    page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(0).click();
+	                    page.waitForSelector("ul[role='listbox']");
+	                    page.locator("li:has-text('Ingresso a pagamento')").click();
 
-	                        if (i == 0) {
-	                            page.locator("input[placeholder='hh:mm']").nth(0).fill(orarioInizio);
-	                            page.locator("input[placeholder='hh:mm']").nth(1).fill(orarioFine);
-
-	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
-	                            page.waitForSelector("ul[role='listbox']");
-	                            page.locator("li:has-text('Ingresso a pagamento')").click();
-	                        } else {
-	                            page.getByText("Aggiungi").click();
-	                            page.waitForTimeout(500);
-
-	                            page.locator("input[placeholder='hh:mm']").nth(i * 2).fill(orarioInizio);
-	                            page.locator("input[placeholder='hh:mm']").nth(i * 2 + 1).fill(orarioFine);
-
-	                            page.locator("label:has-text('MODALITÀ DI INGRESSO') + div div[role='button']").nth(i).click();
-	                            page.waitForSelector("ul[role='listbox']");
-	                            page.locator("li:has-text('Ingresso a pagamento')").click();
-	                        }
-	                    }
 	                } catch (Exception e) {
 	                    System.err.println("❌ Errore nella gestione delle sessioni orarie: " + e.getMessage());
 	                    e.printStackTrace();
 	                }
-	               
 
 	           
 	       
@@ -185,13 +190,29 @@ public class SiaeAutomationService {
 	                Locator checkbox = page.locator("label:has-text('Sono in possesso di licenza OGC') input[type='checkbox']");
 	                checkbox.click();
 	                
-	                
-	                System.out.println("⏳ Attendo che l’utente carichi un PDF nella sezione documenti...");
-
-	             // Cambia il selettore qui sotto con quello corretto (es. nome file, estensione, classe ecc.)
-	             page.waitForSelector("text=.pdf", new Page.WaitForSelectorOptions().setTimeout(3000000)); // 5 min max
-
-	             System.out.println("✅ PDF rilevato! Continuo con l’automazione...");
+	            // carica PDF
+	                try {
+	                	  String nomeFilePDF = EventoRow.toPDFName(
+	                		        evento.getNomeEventoELocation(),
+	                		        evento.getDataEvento(),
+	                		        evento.getSessioni()
+	                		    );
+	                 // Percorso dinamico Desktop > LeaDownloads
+	                    String userHome = System.getProperty("user.home");
+	                    Path cartellaPDF = Paths.get(userHome, "Desktop", "LeaDownloads");
+	                    Path pathPDF = cartellaPDF.resolve(nomeFilePDF);
+	                    
+	                    if (!Files.exists(pathPDF)) {
+	                        System.err.println("❌ File PDF non trovato: " + pathPDF.toString());
+	                    } else {
+	                        System.out.println("📎 Carico PDF: " + pathPDF.toString());
+	                        page.setInputFiles("input[type='file']", pathPDF);
+	                        page.waitForSelector("text=" + nomeFilePDF);
+	                        System.out.println("✅ PDF caricato con successo");
+	                    }
+	                } catch (Exception e) {
+	                    System.err.println("❌ Errore nel caricamento del PDF: " + e.getMessage());
+	                }
 	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	          
@@ -210,26 +231,24 @@ public class SiaeAutomationService {
 	             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                page.pause();	
-	                /*
-	                try {	
-	                    // Hover sul pulsante esatto "Permessi" usando selettore preciso
-	                    Locator menuPermessi = page.locator("button[aria-controls='simple-menu'] >> text=Permessi");
-	                    menuPermessi.hover();
-	                    page.waitForTimeout(500); // tempo per far apparire il dropdown
+	                
+	                try {
+	                    // Torna alla home del portale organizzatori
+	                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Portale Organizzatori Professionali")).click();
+	                    page.waitForTimeout(1000);
+	                    // Attendi il popup di conferma e clicca su "CONFERMA"
+	                    page.waitForSelector("button:has-text('CONFERMA')", new Page.WaitForSelectorOptions().setTimeout(5000));
+	                    page.locator("button:has-text('CONFERMA')").click();
+	                    // Clicca nuovamente su "Nuovo Permesso"
+	                    page.waitForSelector("text=Nuovo Permesso", new Page.WaitForSelectorOptions().setTimeout(5000));
+	                    page.getByText("Nuovo Permesso").click();
 
-	                    // Clic su "Aggiungi Permesso"
-	                    Locator aggiungiPermesso = page.locator("text=Aggiungi Permesso");
-	                    aggiungiPermesso.waitFor(new Locator.WaitForOptions().setTimeout(5000));
-	                    aggiungiPermesso.click();
-
-	                    System.out.println("✅ Cliccato su 'Aggiungi Permesso'");
+	                    System.out.println("🔄 Tornato al menu iniziale per il prossimo evento...");
 	                } catch (Exception e) {
-	                    System.err.println("❌ Errore durante il click su 'Aggiungi Permesso': " + e.getMessage());
+	                    System.err.println("❌ Errore nel tornare al menu principale per il prossimo evento: " + e.getMessage());
 	                }
-
+	           
 					System.out.println("▶ Elaborazione evento " + (j + 1) + " di " + eventlist.size());
-	              */
 	              }
 	            page.close();
 	            browser.close();
