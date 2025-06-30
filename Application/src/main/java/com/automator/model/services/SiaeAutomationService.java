@@ -837,12 +837,24 @@ public class SiaeAutomationService {
             page.getByRole(AriaRole.TEXTBOX).click();
             // Inserisce testo nel campo
             page.getByRole(AriaRole.TEXTBOX).fill("Riconsegna automatizzata");
-            // Sostituisce la conferma con "Annulla"
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+            // Conferma effettiva
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
             page.waitForTimeout(1000);
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
             return;
         }
+
+        // Clicca sul primo div dentro il gruppo con nome "Vuoi riconsegnare il PM a"
+        Locator giveBackText = page.getByRole(
+                AriaRole.GROUP,
+                new Page.GetByRoleOptions().setName("Vuoi riconsegnare il PM a")
+        );
+
+        giveBackText.locator("div").first().click();
+
+        // Inserisci il motivo della cancellazione nel campo di testo
+        page.locator("#filled-input-cancellation-reason").fill("Riconsegna automatizzata");
+
 
         // Seleziona radio "Programma artista principale"
         Locator radio = page.getByRole(AriaRole.RADIO, new Page.GetByRoleOptions().setName("Programma artista principale"));
@@ -850,8 +862,8 @@ public class SiaeAutomationService {
             radio.check();
         }
 
-        //TODO Clic su "Annulla" da sostituire con click su conferma
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+        //Conferma effettiva
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
 
         // Clic su "PROGRAMMI MUSICALI"
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
