@@ -261,12 +261,6 @@ public class SiaeAutomationService {
      * 03/06/25 --> gestita la presenza di tabella con più pagine + *30/05/25
      * */
     public boolean licenseCheck(String email, String password) {
-    	/*
-    	 * attualmente, per facilità di test,le credenziali verrano salvate "in chiaro",
-    	 * successivamente verrano prese da input nella UI 
-    	 * */
-    	  
-
 
     	try (Playwright playwright = Playwright.create()) {
     		
@@ -437,12 +431,11 @@ public class SiaeAutomationService {
                         page.waitForLoadState(LoadState.NETWORKIDLE);
                         page.waitForTimeout(3000);
                         
-                        // Processa la pagina del permesso (qui puoi aggiungere la tua logica)
-                       // processPermissionDetailsPage(page);
+                        // Processa la pagina del permesso e accettalo
+                        processPermissionDetailsPage(page);
                         
-                        // TORNA INDIETRO alla tabella
-                        System.out.println("Tornando indietro alla tabella...");
-                        page.goBack();
+                        // NOTA: Non fare page.goBack() qui perché il bottone Ok ci riporta già alla tabella
+                        // Il metodo principale gestirà il controllo della tabella
                         
                         // Attendi che la tabella si ricarichi completamente
                         page.waitForLoadState(LoadState.NETWORKIDLE);
@@ -479,6 +472,102 @@ public class SiaeAutomationService {
             
         } catch (Exception e) {
             System.err.println("Errore durante il processamento dei permessi: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+ // Metodo per processare la pagina dei dettagli del permesso e accettarlo
+    private void processPermissionDetailsPage(Page page) {
+        try {
+            System.out.println("Processando pagina dettagli permesso...");
+            
+            // Attendi che la pagina dei dettagli sia completamente caricata
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+            page.waitForTimeout(2000);
+            
+            // Cerca il bottone "Accetta Permesso"
+            Locator accettaButton = page.locator(
+                "button:has-text('Accetta Permesso'), " +
+                "button:has-text('ACCETTA PERMESSO'), " +
+                ".MuiButton-root:has-text('Accetta Permesso')"
+            );
+            
+            if (accettaButton.count() > 0) {
+                System.out.println("Trovato bottone 'Accetta Permesso', cliccando...");
+                
+                // Scroll al bottone e clicca
+                accettaButton.first().scrollIntoViewIfNeeded();
+                accettaButton.first().waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(5000));
+                
+               accettaButton.first().click();
+                
+                // Attendi che appaia la finestra di conferma
+                page.waitForTimeout(1500);
+                
+                // Cerca il bottone "Conferma" nella finestra di dialogo
+                Locator confermaButton = page.locator(
+                    "button:has-text('Conferma'), " +
+                    "button:has-text('CONFERMA'), " +
+                    ".MuiButton-root:has-text('Conferma'), " +
+                    "[role='dialog'] button:has-text('Conferma')"
+                );
+                
+                if (confermaButton.count() > 0) {
+                    System.out.println("Trovato bottone 'Conferma' nella finestra di dialogo, cliccando...");
+                    
+                    confermaButton.first().waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000));
+                    
+                    confermaButton.first().click();
+                    
+                    // Attendi che la conferma sia processata
+                    page.waitForTimeout(10000);
+                    
+                    // Cerca il bottone "Ok" finale
+                    Locator okButton = page.locator(
+                        "button:has-text('Ok'), " +
+                        "button:has-text('OK'), " +
+                        ".MuiButton-root:has-text('Ok'), " +
+                        "[role='dialog'] button:has-text('Ok')"
+                    );
+                    
+                    if (okButton.count() > 0) {
+                        System.out.println("Trovato bottone 'Ok' finale, cliccando...");
+                        
+                        okButton.first().waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(5000));
+                        
+                        okButton.first().click();
+                        
+                        // Attendi che il browser torni alla tabella automaticamente
+                        page.waitForTimeout(2000);
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
+                        page.waitForTimeout(1000);
+                        
+                        System.out.println("Permesso accettato con successo! Tornando alla tabella...");
+                        page.goBack();
+                        
+                    } else {
+                        System.out.println("Bottone 'Ok' finale non trovato");
+                        // Attendi comunque un po' per eventuali redirect automatici
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
+                        page.waitForTimeout(1000);
+                    }
+                    
+                } else {
+                    System.out.println("Bottone 'Conferma' non trovato nella finestra di dialogo");
+                }
+                
+            } else {
+                System.out.println("Bottone 'Accetta Permesso' non trovato nella pagina");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Errore durante l'accettazione del permesso: " + e.getMessage());
             e.printStackTrace();
         }
     }
