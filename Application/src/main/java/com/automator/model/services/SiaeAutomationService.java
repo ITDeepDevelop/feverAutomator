@@ -73,6 +73,8 @@ public class SiaeAutomationService {
 	            	  }
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
+	            	  
+	            	page.waitForTimeout(3000);
 	            	page.locator("input[placeholder='Città']").click();
 	                page.locator("input[placeholder='Città']").fill(evento.getCitta());
 	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getCitta());
@@ -203,7 +205,9 @@ public class SiaeAutomationService {
 	                    Path pathPDF = cartellaPDF.resolve(nomeFilePDF);
 	                    
 	                    if (!Files.exists(pathPDF)) {
-	                        System.err.println("❌ File PDF non trovato: " + pathPDF.toString());
+	                        String errorMsg = "❌ File PDF non trovato: " + pathPDF.toString();
+	                        System.err.println(errorMsg);
+	                        throw new RuntimeException(errorMsg);
 	                    } else {
 	                        System.out.println("📎 Carico PDF: " + pathPDF.toString());
 	                        page.setInputFiles("input[type='file']", pathPDF);
@@ -231,23 +235,35 @@ public class SiaeAutomationService {
 	             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	             
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                
 	                try {
+	                	// Primo INVIA (pagina principale)
+	                    page.waitForSelector("button[type='submit']", new Page.WaitForSelectorOptions().setTimeout(10000));
+	                    page.locator("button[type='submit']").click();
+
+	                    // Secondo INVIA (nel popup di conferma)
+	                    page.waitForSelector("div[role='dialog'] button:has-text('Invia')", new Page.WaitForSelectorOptions().setTimeout(5000));
+	                    page.locator("div[role='dialog'] button:has-text('Invia')").click();
+
+	                    // Attendi popup "La richiesta è stata inviata con successo"
+	                    page.waitForSelector("text=La richiesta è stata inviata con successo", new Page.WaitForSelectorOptions().setTimeout(10000));
+	                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("OK")).click();
+
+	                    // Attendi la schermata successiva con "Inviata"
+	                    page.waitForSelector("text=Inviata", new Page.WaitForSelectorOptions().setTimeout(10000));
+
 	                    // Torna alla home del portale organizzatori
 	                    page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Portale Organizzatori Professionali")).click();
 	                    page.waitForTimeout(1000);
-	                    // Attendi il popup di conferma e clicca su "CONFERMA"
-	                    page.waitForSelector("button:has-text('CONFERMA')", new Page.WaitForSelectorOptions().setTimeout(5000));
-	                    page.locator("button:has-text('CONFERMA')").click();
+
 	                    // Clicca nuovamente su "Nuovo Permesso"
 	                    page.waitForSelector("text=Nuovo Permesso", new Page.WaitForSelectorOptions().setTimeout(5000));
 	                    page.getByText("Nuovo Permesso").click();
 
-	                    System.out.println("🔄 Tornato al menu iniziale per il prossimo evento...");
+	                    System.out.println("✅ Evento inviato con successo. Passo al successivo...");
 	                } catch (Exception e) {
-	                    System.err.println("❌ Errore nel tornare al menu principale per il prossimo evento: " + e.getMessage());
+	                    System.err.println("❌ Errore dopo invio permesso: " + e.getMessage());
+	                    
 	                }
-	           
 					System.out.println("▶ Elaborazione evento " + (j + 1) + " di " + eventlist.size());
 	              }
 	            page.close();
