@@ -407,7 +407,7 @@ public class SiaeAutomationService {
                 .setTimeout(10000));
             
             boolean foundMoreButtons = true;
-            int processedCount = 0;
+            int totalProcessed = 0;
             
             while (foundMoreButtons) {
                 // Ri-trova tutti i bottoni "Visualizza" ogni volta (riferimenti freschi)
@@ -418,30 +418,24 @@ public class SiaeAutomationService {
                     "*[role='button']:has-text('Visualizza')"
                 );
                 
-                int totalButtons = visualizzaButtons.count();
-                System.out.println("Trovati " + totalButtons + " bottoni 'Visualizza' totali, processati: " + processedCount);
+                int currentButtonCount = visualizzaButtons.count();
+                System.out.println("Trovati " + currentButtonCount + " bottoni 'Visualizza' rimanenti (totale processati: " + totalProcessed + ")");
                 
-                if (processedCount >= totalButtons) {
-                    System.out.println("Tutti i bottoni della pagina corrente sono stati processati");
-                    foundMoreButtons = false;
-                    break;
-                }
-                
-                // Prendi il prossimo bottone da processare
-                Locator currentButton = visualizzaButtons.nth(processedCount);
-                
-                if (currentButton.count() > 0) {
+                if (currentButtonCount > 0) {
+                    // Prendi sempre il PRIMO bottone disponibile
+                    Locator firstButton = visualizzaButtons.first();
+                    
                     try {
-                        System.out.println("Processando bottone " + (processedCount + 1) + "/" + totalButtons);
+                        System.out.println("Processando bottone " + (totalProcessed + 1) + " (primo disponibile)");
                         
                         // Scroll al bottone e clicca
-                        currentButton.scrollIntoViewIfNeeded();
-                        currentButton.waitFor(new Locator.WaitForOptions()
+                        firstButton.scrollIntoViewIfNeeded();
+                        firstButton.waitFor(new Locator.WaitForOptions()
                             .setState(WaitForSelectorState.VISIBLE)
                             .setTimeout(5000));
                         
                         System.out.println("Cliccando su 'Visualizza'...");
-                        currentButton.click();
+                        firstButton.click();
                         
                         // Attendi che la nuova pagina si carichi
                         page.waitForLoadState(LoadState.NETWORKIDLE);
@@ -450,10 +444,7 @@ public class SiaeAutomationService {
                         // Processa la pagina del permesso e accettalo
                         processPermissionDetailsPage(page);
                         
-                        // NOTA: Non fare page.goBack() qui perché il bottone Ok ci riporta già alla tabella
-                        // Il metodo principale gestirà il controllo della tabella
-                        
-                        // Attendi che la tabella si ricarichi completamente
+                        // Attendi che la tabella si ricarichi completamente dopo l'accettazione
                         page.waitForLoadState(LoadState.NETWORKIDLE);
                         page.waitForTimeout(3000);
                         
@@ -462,29 +453,44 @@ public class SiaeAutomationService {
                             .setState(WaitForSelectorState.VISIBLE)
                             .setTimeout(10000));
                         
-                        processedCount++;
-                        System.out.println("Bottone " + processedCount + " processato con successo");
+                        totalProcessed++;
+                        System.out.println("Bottone processato con successo (totale processati: " + totalProcessed + ")");
                         
                     } catch (Exception e) {
-                        System.err.println("Errore nel processare il bottone " + (processedCount + 1) + ": " + e.getMessage());
+                        System.err.println("Errore nel processare il bottone " + (totalProcessed + 1) + ": " + e.getMessage());
                         
                         // In caso di errore, prova comunque a tornare alla tabella
                         try {
                             page.goBack();
                             page.waitForLoadState(LoadState.NETWORKIDLE);
                             page.waitForTimeout(2000);
+                            
+                            // Riclicca su "Da Accettare" per essere sicuri di essere nella sezione corretta
+                            Locator daAccettareTab = page.locator("button[role='tab']:has-text('Da Accettare')").first();
+                            if (daAccettareTab.count() > 0) {
+                                daAccettareTab.click();
+                                page.waitForTimeout(2000);
+                            }
+                            
                         } catch (Exception backError) {
                             System.err.println("Errore nel tornare indietro: " + backError.getMessage());
                         }
                         
-                        processedCount++; // Continua con il prossimo anche se questo ha fallito
+                        totalProcessed++; // Continua con il prossimo anche se questo ha fallito
                     }
                 } else {
+                    System.out.println("Nessun bottone 'Visualizza' rimanente nella pagina corrente");
                     foundMoreButtons = false;
+                }
+                
+                // Sicurezza: evita loop infiniti
+                if (totalProcessed > 50) {
+                    System.out.println("Raggiunto limite massimo di permessi per pagina (50)");
+                    break;
                 }
             }
             
-            System.out.println("Completato processamento di tutti i bottoni nella pagina corrente");
+            System.out.println("Completato processamento di tutti i bottoni nella pagina corrente. Totale processati: " + totalProcessed);
             
         } catch (Exception e) {
             System.err.println("Errore durante il processamento dei permessi: " + e.getMessage());
@@ -560,12 +566,19 @@ public class SiaeAutomationService {
                         okButton.first().click();
                         
                         // Attendi che il browser torni alla tabella automaticamente
-                        page.waitForTimeout(2000);
+                       /* page.waitForTimeout(2000);
                         page.waitForLoadState(LoadState.NETWORKIDLE);
-                        page.waitForTimeout(1000);
+                        page.waitForTimeout(1000);*/
                         
-                        System.out.println("Permesso accettato con successo! Tornando alla tabella...");
-                        page.goBack();
+                        System.out.println("Permesso accettato con successo!");
+
+                        Locator daAccettareTab = page.locator("button[role='tab']:has-text('Da Accettare')").first();
+                        daAccettareTab.waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(10000));
+                        daAccettareTab.click();
+                        System.out.println("Click eseguito su 'Da Accettare'post accettazione permesso");
+                        // page.goBack();
                         
                     } else {
                         System.out.println("Bottone 'Ok' finale non trovato");
