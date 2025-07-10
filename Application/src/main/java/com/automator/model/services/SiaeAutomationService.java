@@ -988,16 +988,32 @@ public class SiaeAutomationService {
             return true;
         }
 
-        // Clicca sul primo div dentro il gruppo con nome "Vuoi riconsegnare il PM a"
-        Locator giveBackText = page.getByRole(
-                AriaRole.GROUP,
-                new Page.GetByRoleOptions().setName("Vuoi riconsegnare il PM a")
-        );
+        try {
+            // Cerca il gruppo con il testo "Vuoi riconsegnare il PM a"
+            Locator giveBackText = page.getByRole(
+                    AriaRole.GROUP,
+                    new Page.GetByRoleOptions().setName("Vuoi riconsegnare il PM a")
+            );
 
-        giveBackText.locator("div").first().click();
+            // Attende che il gruppo sia visibile entro 5 secondi
+            giveBackText.waitFor(new Locator.WaitForOptions().setTimeout(5000));
 
-        // Inserisci il motivo della cancellazione nel campo di testo
-        page.locator("#filled-input-cancellation-reason").fill("Riconsegna automatizzata");
+            // Clicca sul primo div dentro il gruppo
+            giveBackText.locator("div").first().click();
+        } catch (PlaywrightException e) {
+            // Se il gruppo non è presente o cliccabile, continua senza errori
+            System.out.println("Elemento 'Vuoi riconsegnare il PM a' non trovato o non cliccabile, si prosegue.");
+        }
+
+        try {
+            // Attende che il campo sia visibile entro 5 secondi (5000 ms)
+            Locator motivoCancellazione = page.locator("#filled-input-cancellation-reason");
+            motivoCancellazione.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            motivoCancellazione.fill("Riconsegna automatizzata");
+        } catch (TimeoutError e) {
+            // L'elemento non è stato trovato entro 5 secondi, prosegue senza fare nulla
+            System.out.println("Campo motivo cancellazione non trovato, si prosegue.");
+        }
 
 
         // Seleziona radio "Programma artista principale"
