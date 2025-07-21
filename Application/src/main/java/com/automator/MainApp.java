@@ -15,6 +15,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import javafx.scene.control.ScrollPane;
 
 public class MainApp extends Application {
 
@@ -44,14 +45,32 @@ public class MainApp extends Application {
         tabPane.setStyle("-fx-background-color: white; -fx-background-insets: 0;");
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
-        Tab siaeTab = new Tab("SIAE", new SiaePage());
-        Tab leaTab = new Tab("LEA", new LeaPage());
-        Tab excelTab = new Tab("Excel", new ExcelPage());
+        ScrollPane siaeScroll = new ScrollPane(new SiaePage());
+        siaeScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        siaeScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        siaeScroll.setFitToHeight(true);
+        siaeScroll.setFitToWidth(false);
+
+        ScrollPane leaScroll = new ScrollPane(new LeaPage());
+        leaScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        leaScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        leaScroll.setFitToHeight(true);
+        leaScroll.setFitToWidth(false);
+
+        ScrollPane excelScroll = new ScrollPane(new ExcelPage());
+        excelScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        excelScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        excelScroll.setFitToHeight(true);
+        excelScroll.setFitToWidth(true);
+
+        Tab siaeTab = new Tab("SIAE", siaeScroll);
+        Tab leaTab = new Tab("LEA", leaScroll);
+        Tab excelTab = new Tab("Excel", excelScroll);
 
         tabPane.getTabs().addAll(siaeTab, leaTab, excelTab);
         root.setCenter(tabPane);
 
-        Scene scene = new Scene(root, 1600, 800);
+        Scene scene = new Scene(root, 800, 500);
         
         // Stili CSS aggiornati
         String css = ".tab-pane .tab-header-area .tab-header-background {\n" +

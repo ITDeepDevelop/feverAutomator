@@ -23,25 +23,6 @@ public class SiaePage extends BorderPane {
 
     public SiaePage() {
         siaeController = new SiaeController();
-
-        // Header migliorato
-        Label headerLabel = new Label("Operazioni SIAE");
-        headerLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-        
-        Label subtitleLabel = new Label("Gestione automatizzata permessi e bordero");
-        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d;");
-        
-        VBox header = new VBox(5, headerLabel, subtitleLabel);
-        header.setPadding(new Insets(25, 20, 25, 20));
-        header.setAlignment(Pos.CENTER);
-        header.setStyle("-fx-background-color: linear-gradient(to right, #3498db, #2980b9); " +
-                       "-fx-background-radius: 8;");
-        // Cambia il colore del testo per il gradiente blu
-        headerLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: white;");
-        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #ecf0f1;");
-        
-        this.setTop(header);
-
         // Sezione credenziali migliorata
         Label credentialsTitle = new Label("Credenziali di Accesso");
         credentialsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");

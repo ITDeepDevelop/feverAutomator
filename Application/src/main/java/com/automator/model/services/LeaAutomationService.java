@@ -671,6 +671,7 @@ public class LeaAutomationService {
                             // Creazione della cartella se non esiste
                             Files.createDirectories(desktopDownloads);
                             String fileName = toPDFName(event.getNomeEventoELocation(), event.getDataEvento(), time);
+                            System.out.println("Salvo file con Evento: " + event.getNomeEventoELocation() + " | Data: " + event.getDataEvento() + " | Ora: " + time);
                             Path targetPath = desktopDownloads.resolve(fileName);
                             download.saveAs(targetPath);
                             System.out.println("File salvato in: " + targetPath.toAbsolutePath());
@@ -713,19 +714,9 @@ public class LeaAutomationService {
     }
 
     public String extractTime(String text) {
-        if (text == null) return "";
+        if (text == null || text.length() < 5) return "Non Trovata";
 
-        // 1) Trova "H" seguito da orario tipo 22:00 (case-insensitive sulla H)
-        Pattern pattern = Pattern.compile("(?i)H\\s*(\\d{1,2}:\\d{2})");
-        Matcher matcher = pattern.matcher(text);
-
-        if (matcher.find()) {
-            // 2) group(1) è ad esempio "22:00"
-            String timeWithColon = matcher.group(1);
-            // 3) Rimuove tutto ciò che non è cifra, ottenendo "2200"
-            return timeWithColon.replaceAll("\\D", "");
-        }
-
-        return "";
+        String lastFive = text.substring(text.length() - 5); // ultimi 5 caratteri
+        return lastFive.replace(":", ""); // rimuove i due punti
     }
 }
