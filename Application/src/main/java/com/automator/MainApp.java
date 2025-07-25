@@ -58,7 +58,8 @@ public class MainApp extends Application {
 
         stage.setScene(scene);
         stage.setTitle("Fever Automator");
-        stage.setMaximized(screenBounds.getWidth() <= 1024 || screenBounds.getHeight() <= 768);
+        //stage.setMaximized(screenBounds.getWidth() <= 1024 || screenBounds.getHeight() <= 768);
+        stage.setMaximized(false);
         stage.show();
     }
     
