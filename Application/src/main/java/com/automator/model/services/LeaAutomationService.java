@@ -329,7 +329,7 @@ public class LeaAutomationService {
                 page.waitForTimeout(2000);
 
                 // Leggi i dati dall'evento web
-                page.waitForSelector("input#license_form_lm_event_name");
+                /*page.waitForSelector("input#license_form_lm_event_name");
                 String nomeEventoWeb = page.inputValue("input#license_form_lm_event_name");
                 System.out.println("Nome evento dal web: " + nomeEventoWeb);
 
@@ -340,7 +340,46 @@ public class LeaAutomationService {
                 EventoRow eventoCorrispondente = trovaEventoCorrispondente(nomeEventoWeb, cittaWeb);
                 boolean capInserito = false;
                 boolean capienzaInserita = false;
+                boolean eventoProcessato = false;*/
+             // Attendi e leggi il nome dell'evento dal form
+                page.waitForSelector("input#license_form_lm_event_name");
+                String nomeEventoWeb = page.inputValue("input#license_form_lm_event_name");
+
+                // Pulisci il nome evento: prendi tutto ciò che c'è prima di '@' o '-'
+                int indexAt = nomeEventoWeb.indexOf('@');
+                int indexDash = nomeEventoWeb.indexOf('-');
+
+                // Trova la prima occorrenza tra '@' e '-'
+                int cutIndex = -1;
+                if (indexAt != -1 && indexDash != -1) {
+                    cutIndex = Math.min(indexAt, indexDash);
+                } else if (indexAt != -1) {
+                    cutIndex = indexAt;
+                } else if (indexDash != -1) {
+                    cutIndex = indexDash;
+                }
+
+                // Se esiste uno dei simboli, taglia il nome
+                if (cutIndex != -1) {
+                    nomeEventoWeb = nomeEventoWeb.substring(0, cutIndex).trim();
+                }
+
+                System.out.println("Nome evento dal web (pulito): " + nomeEventoWeb);
+
+                // Attendi e leggi la città dal form
+                page.waitForSelector("input#venue_city");
+                String cittaWeb = page.inputValue("input#venue_city");
+                System.out.println("Città dal web: " + cittaWeb);
+
+                // Cerca l'evento corrispondente
+                EventoRow eventoCorrispondente = trovaEventoCorrispondente(nomeEventoWeb, cittaWeb);
+
+                // Variabili di stato
+                boolean capInserito = false;
+                boolean capienzaInserita = false;
                 boolean eventoProcessato = false;
+
+
 
                 if (eventoCorrispondente != null) {
                     System.out.println("Evento trovato nei dati Excel!");
