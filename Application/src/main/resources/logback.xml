@@ -1,0 +1,13 @@
+<configuration>
+    <root level="info">
+        <appender-ref ref="FILE" />
+    </root>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/automator.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+</configuration>
