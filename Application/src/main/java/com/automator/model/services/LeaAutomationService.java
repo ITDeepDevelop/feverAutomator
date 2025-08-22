@@ -18,8 +18,31 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.automator.model.services.EventoRow.toPDFName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.options.WaitForSelectorState;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.automator.model.services.EventoRow.toPDFName;
 
 public class LeaAutomationService {
+    private static final Logger logger = LoggerFactory.getLogger(LeaAutomationService.class);
+
 	private boolean TEST_MODE = true;
     // COSTANTS
     private static final String HOMEPAGE_URL = "https://licence.soundreef.com/it/";
@@ -45,6 +68,8 @@ public class LeaAutomationService {
     private static final String NAV_LINK_LICENSES = "Licenze description";
     private static final String DOWNLOAD_FOLDER = "LeaDownloads";
     private static final String DEFAULT_TIME_NOT_FOUND = "Non Trovata";
+    private static final String LOGIN_BUTTON_TEXT = "Accedi";
+
 	
     private List<EventoRow> listaEventiDaExcel;
 
@@ -58,23 +83,23 @@ public class LeaAutomationService {
     }
 
     private boolean caricaEventiDaExcelConLogging() {
-        System.out.println("Caricamento dati da Excel...");
+        logger.info("Caricamento dati da Excel...");
         List<EventoRow> lista = caricaEventiDaExcel();
         
         if (lista == null || lista.isEmpty()) {
-            System.err.println("❌ Nessun evento trovato o errore nel file Excel!");
+            logger.error("Nessun evento trovato o errore nel file Excel!");
             return false;
         }
 
         this.listaEventiDaExcel = lista;
-        System.out.println("✅ Caricati " + lista.size() + " eventi da Excel");
+        logger.info("Caricati " + lista.size() + " eventi da Excel");
         stampaEventiDimostrativi();
         return true;
     }
 
 
     private void stampaEventiDimostrativi() {
-        System.out.println("📋 Primi eventi caricati:");
+        logger.info("Primi eventi caricati:");
         for (int i = 0; i < Math.min(5, listaEventiDaExcel.size()); i++) {
             EventoRow evento = listaEventiDaExcel.get(i);
             System.out.println("  " + (i+1) + ". " + evento.getNomeEventoELocation() + 
@@ -83,13 +108,13 @@ public class LeaAutomationService {
                                ", Capienza: " + evento.getCapienza() + ")");
         }
         if (listaEventiDaExcel.size() > 5) {
-            System.out.println("  ... e altri " + (listaEventiDaExcel.size() - 5) + " eventi");
+            logger.info("  ... e altri " + (listaEventiDaExcel.size() - 5) + " eventi");
         }
     }
 
     private boolean avviaAutomazioneWeb(String email, String password) {
         try (Playwright playwright = Playwright.create()) {
-            System.out.println("Avvio automazione web...");
+            logger.info("Avvio automazione web...");
 
             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
             Page page = browser.newContext().newPage();
@@ -97,7 +122,7 @@ public class LeaAutomationService {
             page.navigate(HOMEPAGE_URL);
             accettaCookie(page);
 
-            System.out.println("Credenziali: " + email);
+            logger.info("Credenziali: " + email);
             effettuaLogin(page, email, password);
 
             gestisciEventiDaConfermare(page);
@@ -108,7 +133,7 @@ public class LeaAutomationService {
 
             return true;
         } catch (Exception e) {
-            System.err.println("❌ Errore durante l'automazione web: " + e.getMessage());
+            logger.error("Errore durante l'automazione web: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -120,7 +145,7 @@ public class LeaAutomationService {
             page.click(COOKIE_SELECTOR);
             page.waitForTimeout(1000);
         } catch (Exception e) {
-            System.out.println("Errore nell'accettazione dei cookie: " + e.getMessage());
+            logger.info("Errore nell'accettazione dei cookie: " + e.getMessage());
         }
     }
 
@@ -141,7 +166,7 @@ public class LeaAutomationService {
             page.waitForLoadState(LoadState.NETWORKIDLE);
             page.waitForTimeout(1000);
 
-            System.out.println("Credenziali inserite con successo");
+            logger.info("Credenziali inserite con successo");
         } catch (Exception e) {
             throw new RuntimeException("Login fallito", e);
         }
@@ -158,7 +183,7 @@ public class LeaAutomationService {
             while (true) {
                 List<ElementHandle> eventi = page.querySelectorAll(EVENT_BOX_SELECTOR);
                 if (eventi.isEmpty()) {
-                    System.out.println("🎉 Nessun evento disponibile.");
+                    logger.info("Nessun evento disponibile.");
                     break;
                 }
 
@@ -173,7 +198,7 @@ public class LeaAutomationService {
                 }
 
                 if (eventoDaProcessare == null) {
-                    System.out.println("🎉 Tutti gli eventi sono stati visitati!");
+                    logger.info("🎉 Tutti gli eventi sono stati visitati!");
                     break;
                 }
 
@@ -185,9 +210,9 @@ public class LeaAutomationService {
                 processaEventoSingolo(page);
             }
 
-            System.out.println("✅ Tutti gli eventi sono stati gestiti!");
+            logger.info("Tutti gli eventi sono stati gestiti!");
         } catch (Exception e) {
-            System.err.println("Errore in gestisciEventiDaConfermare: " + e.getMessage());
+            logger.error("Errore in gestisciEventiDaConfermare: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -209,10 +234,10 @@ public class LeaAutomationService {
                 if (capInserito && capienzaInserita) {
                     eventoProcessato = confermaEventoEGeneraLicenza(page);
                 } else {
-                    System.out.println("⚠️ Dati incompleti. CAP inserito: " + capInserito + ", Capienza: " + capienzaInserita);
+                    logger.info("Dati incompleti. CAP inserito: " + capInserito + ", Capienza: " + capienzaInserita);
                 }
             } else {
-                System.out.println("Evento non trovato in Excel: " + nomeEventoWeb + " - " + cittaWeb);
+                logger.info("Evento non trovato in Excel: " + nomeEventoWeb + " - " + cittaWeb);
             }
 
             if (eventoProcessato) {
@@ -223,7 +248,7 @@ public class LeaAutomationService {
             }
 
         } catch (Exception e) {
-            System.err.println("Errore nel processo evento: " + e.getMessage());
+            logger.error("Errore nel processo evento: " + e.getMessage());
         }
     }
 
@@ -248,11 +273,11 @@ public class LeaAutomationService {
             if (cap != null && !cap.trim().isEmpty()) {
                 page.waitForSelector(POSTCODE_SELECTOR, new Page.WaitForSelectorOptions().setTimeout(5000));
                 page.fill(POSTCODE_SELECTOR, cap.trim());
-                System.out.println("CAP inserito: " + cap);
+                logger.info("CAP inserito: " + cap);
                 return true;
             }
         } catch (Exception e) {
-            System.out.println("Errore nell'inserimento del CAP: " + e.getMessage());
+            logger.info("Errore nell'inserimento del CAP: " + e.getMessage());
         }
         return false;
     }
@@ -263,16 +288,16 @@ public class LeaAutomationService {
             try {
                 page.waitForSelector(CAPACITY_SELECTOR, new Page.WaitForSelectorOptions().setTimeout(5000));
                 page.fill(CAPACITY_SELECTOR, capienza.trim());
-                System.out.println("Capienza inserita: " + capienza);
+                logger.info("Capienza inserita: " + capienza);
                 return true;
             } catch (Exception e) {
                 try {
                     page.waitForSelector(ALT_CAPACITY_SELECTOR, new Page.WaitForSelectorOptions().setTimeout(2000));
                     page.fill(ALT_CAPACITY_SELECTOR, capienza.trim());
-                    System.out.println("Capienza inserita (campo alternativo): " + capienza);
+                    logger.info("Capienza inserita (campo alternativo): " + capienza);
                     return true;
                 } catch (Exception ignored) {
-                    System.out.println("Nessun campo capienza trovato.");
+                    logger.info("Nessun campo capienza trovato.");
                 }
             }
         }
@@ -289,10 +314,10 @@ public class LeaAutomationService {
             page.waitForSelector("button[type='submit'].waves-effect.btn.primary", new Page.WaitForSelectorOptions().setTimeout(5000));
             page.click("button[type='submit'].waves-effect.btn.primary");
             page.waitForTimeout(3000);
-            System.out.println("✅ Licenza generata!");
+            logger.info("Licenza generata!");
             return true;
         } catch (Exception e) {
-            System.out.println("Errore durante la generazione licenza: " + e.getMessage());
+            logger.info("Errore durante la generazione licenza: " + e.getMessage());
             return false;
         }
     }
@@ -300,11 +325,11 @@ public class LeaAutomationService {
     private void selezionaCheckboxConsenso(Page page) {
         page.waitForSelector(CONSENT1_SELECTOR, new Page.WaitForSelectorOptions().setTimeout(5000));
         page.click(CONSENT1_SELECTOR);
-        System.out.println("✅ Checkbox 1 selezionata.");
+        logger.info("Checkbox 1 selezionata.");
 
         page.waitForSelector(CONSENT7_SELECTOR, new Page.WaitForSelectorOptions().setTimeout(5000));
         page.click(CONSENT7_SELECTOR);
-        System.out.println("✅ Checkbox 2 selezionata.");
+        logger.info("Checkbox 2 selezionata.");
     }
 
     private void ritornaAllaHomepagePerProssimoEvento(Page page) {
@@ -337,7 +362,7 @@ public class LeaAutomationService {
                 (nomeExcel.toLowerCase().contains(nomeEventoWeb.toLowerCase()) ||
                  nomeEventoWeb.toLowerCase().contains(nomeExcel.toLowerCase())) &&
                 cittaWeb.trim().equalsIgnoreCase(evento.getCitta().trim())) {
-                System.out.println("Trovata corrispondenza parziale per nome evento");
+                logger.info("Trovata corrispondenza parziale per nome evento");
                 return evento;
             }
         }
@@ -366,10 +391,10 @@ public class LeaAutomationService {
                 return true;
 
             } catch (Exception e) {
-                System.err.println("❌ Errore al tentativo " + attempt);
+                logger.error("Errore al tentativo " + attempt);
                 e.printStackTrace();
                 if (attempt == maxAttempts) {
-                    System.err.println("⛔ Tutti i tentativi falliti.");
+                    logger.error("Tutti i tentativi falliti.");
                     return false;
                 }
             }
@@ -399,7 +424,7 @@ public class LeaAutomationService {
         page.locator(USERNAME_SELECTOR).fill(email);
         page.locator(PASSWORD_SELECTOR).fill(password);
 
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Accedi")).click();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(LOGIN_BUTTON_TEXT)).click();
 
         // Accetta i cookie se presente
         Locator allowCookies = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Allow all cookies"));
@@ -429,7 +454,7 @@ public class LeaAutomationService {
     
     private void processaEventiPerDownload(List<EventoRow> eventi, Page page, String year, String month) throws Exception {
         for (EventoRow event : eventi) {
-            System.out.println("Analizzo il PDF: " + event);
+            logger.info("Analizzo il PDF: " + event);
             page.navigate(LICENSES_URL);
             page.waitForTimeout(1000);
 
@@ -440,11 +465,11 @@ public class LeaAutomationService {
             int count = matches.count();
 
             if (count == 0) {
-                System.out.println("Nessun elemento trovato per: " + eventName);
+                logger.info("Nessun elemento trovato per: " + eventName);
                 continue;
             }
 
-            System.out.println("Trovati " + count + " elementi per: " + eventName);
+            logger.info("Trovati " + count + " elementi per: " + eventName);
             boolean reachedRightTime = false;
 
             for (int i = 0; i < count; i++) {
@@ -479,9 +504,9 @@ public class LeaAutomationService {
         String nomeFile = toPDFName(event.getNomeEventoELocation(), event.getDataEvento(), time);
         Path pathFinale = downloadDir.resolve(nomeFile);
 
-        System.out.println("Salvo file con Evento: " + event.getNomeEventoELocation() + " | Data: " + event.getDataEvento() + " | Ora: " + time);
+        logger.info("Salvo file con Evento: " + event.getNomeEventoELocation() + " | Data: " + event.getDataEvento() + " | Ora: " + time);
         download.saveAs(pathFinale);
-        System.out.println("File salvato in: " + pathFinale.toAbsolutePath());
+        logger.info("File salvato in: " + pathFinale.toAbsolutePath());
     }
     
     public boolean matchesYearMonth(String value, int expectedYear, int expectedMonth) {
@@ -504,7 +529,5 @@ public class LeaAutomationService {
         int index = nomeEvento.indexOf(" - ");
         return (index != -1) ? nomeEvento.substring(0, index) : nomeEvento;
     }
-
-
-
 }
+
