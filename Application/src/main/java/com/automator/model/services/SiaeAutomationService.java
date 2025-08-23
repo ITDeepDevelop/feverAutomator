@@ -73,26 +73,86 @@ public class SiaeAutomationService {
 	            	  }
 	            // 4. Inserimento dati statici (poi da Excel)
 	             // Inserisci città
-	            	  
+	            	page.pause();
+
+		       		 System.out.print(evento);
+	       		 System.out.print(evento.getCitta());
+	       		 System.out.print(evento.getNomeLocation());
 	            	page.waitForTimeout(3000);
+	            	
+	            	String cittaTarget = evento.getCitta().toUpperCase();  // "Como" -> "COMO"
+
+	            	// Focus campo città
 	            	page.locator("input[placeholder='Città']").click();
-	                page.locator("input[placeholder='Città']").fill(evento.getCitta());
-	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getCitta());
-	                page.keyboard().press("ArrowDown");
-	                page.keyboard().press("Enter");
-	                
+	            	page.locator("input[placeholder='Città']").fill("");  // pulizia
+	            	page.locator("input[placeholder='Città']").type(cittaTarget, new Locator.TypeOptions().setDelay(100));
+
+	            	// Attendi caricamento lista
+	            	page.waitForSelector("ul[role='listbox'] li");
+
+	            	// Ottieni tutte le opzioni del dropdown
+	            	Locator opzioni = page.locator("ul[role='listbox'] li");
+	            	int count = opzioni.count();
+
+	            	System.out.println("📋 Lista città disponibili:");
+	            	boolean found = false;
+
+	            	for (int i = 0; i < count; i++) {
+	            	    Locator li = opzioni.nth(i);
+	            	    String testoComplessivo = li.textContent().trim();
+
+	            	    System.out.println(" - Voce [" + i + "]: " + testoComplessivo);
+
+	            	    // Se la voce inizia esattamente con "COMO" (senza considerare spazi) la clicchiamo
+	            	    if (testoComplessivo.replaceAll("\\s+", "").startsWith(cittaTarget)) {
+	            	        li.click();
+	            	        System.out.println("✅ Città trovata e cliccata: " + testoComplessivo);
+	            	        found = true;
+	            	        break;
+	            	    }
+	            	}
+
+	            	if (!found) {
+	            	    System.err.println("❌ Nessuna voce trovata per la città: " + cittaTarget);
+	            	    page.pause();
+	            	}
+
 	                // Inserisci locale
-	                page.locator("input[placeholder='Locale / Indirizzo']").click();
-	                page.locator("input[placeholder='Locale / Indirizzo']").fill(evento.getNomeLocation());
-	                page.waitForSelector("ul[role='listbox'] >> text=" + evento.getNomeLocation());
-	                page.keyboard().press("ArrowDown");
-	                page.keyboard().press("Enter"); 
-	                
-	             // Clicca sul dropdown "Spazio/Sala"
-	              /*  page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')").click();
-	                page.waitForSelector("ul[role='listbox']");
-	                page.locator("li:has-text('" + evento.getSala() + "')").click();
-					*/
+	            	// Step 1: Inserisci solo il nome del locale
+	            	String nomeLocation = evento.getNomeLocation(); // es: "Sociale"
+	            	String via = evento.getIndirizzo().split(",")[0].trim(); // es: "Via Vincenzo Bellini"
+
+	            	page.locator("input[placeholder='Locale / Indirizzo']").click();
+	            	page.locator("input[placeholder='Locale / Indirizzo']").fill(nomeLocation);
+
+	            	// Step 2: Aspetta la lista delle opzioni
+	            	page.waitForSelector("ul[role='listbox'] li");
+
+	            	// Step 3: Cerca nella lista quella che contiene anche la via
+	            	Locator opzioni1 = page.locator("ul[role='listbox'] li");
+	            	int count1 = opzioni1.count();
+	            	boolean found1 = false;
+
+	            	System.out.println("🔍 Cerco opzione contenente via: " + via);
+
+	            	for (int i = 0; i < count1; i++) {
+	            	    String testo = opzioni1.nth(i).textContent().trim();
+	            	    System.out.println(" - [" + i + "] " + testo);
+
+	            	    if (testo.toLowerCase().contains(via.toLowerCase())) {
+	            	        opzioni1.nth(i).click();
+	            	        found1= true;
+	            	        System.out.println("✅ Locale selezionato: " + testo);
+	            	        break;
+	            	    }
+	            	}
+
+	            	if (!found1) {
+	            	    System.err.println("❌ Nessun locale trovato con via: " + via);
+	            	    page.pause(); // debug visivo se necessario
+	            	}
+
+	                page.pause();
 	             // Clicca sul dropdown "Spazio/Sala"
 	                try {
 	                    Locator dropdownSala = page.locator("div[role='button']:has-text('Seleziona lo spazio o la sala del tuo evento')");
@@ -110,9 +170,7 @@ public class SiaeAutomationService {
 	                } catch (Exception e) {
 	                    System.out.println("⚠️ Errore durante la selezione della sala. Uso quella predefinita.");
 	                }
-
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
-	                
 	                
 	             // 5 Seleziona Categoria Evento
 	                String codice = evento.getCodiceSpettacoloGenere();
@@ -132,7 +190,6 @@ public class SiaeAutomationService {
 
 	                // Clicca sull'opzione del genere mappato
 	                page.locator("li:has-text('" + genereEvento + "')").click();
-
 
 	                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Procedi")).click();
 	                
