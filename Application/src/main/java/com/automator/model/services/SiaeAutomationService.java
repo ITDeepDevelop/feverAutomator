@@ -334,12 +334,6 @@ public class SiaeAutomationService {
      * 03/06/25 --> gestita la presenza di tabella con più pagine + *30/05/25
      * */
     public boolean licenseCheck(String email, String password) {
-    	/*
-    	 * attualmente, per facilità di test,le credenziali verrano salvate "in chiaro",
-    	 * successivamente verrano prese da input nella UI 
-    	 * */
-    	  
-
 
     	try (Playwright playwright = Playwright.create()) {
     		
@@ -470,7 +464,7 @@ public class SiaeAutomationService {
                 .setTimeout(10000));
             
             boolean foundMoreButtons = true;
-            int processedCount = 0;
+            int totalProcessed = 0;
             
             while (foundMoreButtons) {
                 // Ri-trova tutti i bottoni "Visualizza" ogni volta (riferimenti freschi)
@@ -481,43 +475,33 @@ public class SiaeAutomationService {
                     "*[role='button']:has-text('Visualizza')"
                 );
                 
-                int totalButtons = visualizzaButtons.count();
-                System.out.println("Trovati " + totalButtons + " bottoni 'Visualizza' totali, processati: " + processedCount);
+                int currentButtonCount = visualizzaButtons.count();
+                System.out.println("Trovati " + currentButtonCount + " bottoni 'Visualizza' rimanenti (totale processati: " + totalProcessed + ")");
                 
-                if (processedCount >= totalButtons) {
-                    System.out.println("Tutti i bottoni della pagina corrente sono stati processati");
-                    foundMoreButtons = false;
-                    break;
-                }
-                
-                // Prendi il prossimo bottone da processare
-                Locator currentButton = visualizzaButtons.nth(processedCount);
-                
-                if (currentButton.count() > 0) {
+                if (currentButtonCount > 0) {
+                    // Prendi sempre il PRIMO bottone disponibile
+                    Locator firstButton = visualizzaButtons.first();
+                    
                     try {
-                        System.out.println("Processando bottone " + (processedCount + 1) + "/" + totalButtons);
+                        System.out.println("Processando bottone " + (totalProcessed + 1) + " (primo disponibile)");
                         
                         // Scroll al bottone e clicca
-                        currentButton.scrollIntoViewIfNeeded();
-                        currentButton.waitFor(new Locator.WaitForOptions()
+                        firstButton.scrollIntoViewIfNeeded();
+                        firstButton.waitFor(new Locator.WaitForOptions()
                             .setState(WaitForSelectorState.VISIBLE)
                             .setTimeout(5000));
                         
                         System.out.println("Cliccando su 'Visualizza'...");
-                        currentButton.click();
+                        firstButton.click();
                         
                         // Attendi che la nuova pagina si carichi
                         page.waitForLoadState(LoadState.NETWORKIDLE);
                         page.waitForTimeout(3000);
                         
-                        // Processa la pagina del permesso (qui puoi aggiungere la tua logica)
-                       // processPermissionDetailsPage(page);
+                        // Processa la pagina del permesso e accettalo
+                        processPermissionDetailsPage(page);
                         
-                        // TORNA INDIETRO alla tabella
-                        System.out.println("Tornando indietro alla tabella...");
-                        page.goBack();
-                        
-                        // Attendi che la tabella si ricarichi completamente
+                        // Attendi che la tabella si ricarichi completamente dopo l'accettazione
                         page.waitForLoadState(LoadState.NETWORKIDLE);
                         page.waitForTimeout(3000);
                         
@@ -526,32 +510,150 @@ public class SiaeAutomationService {
                             .setState(WaitForSelectorState.VISIBLE)
                             .setTimeout(10000));
                         
-                        processedCount++;
-                        System.out.println("Bottone " + processedCount + " processato con successo");
+                        totalProcessed++;
+                        System.out.println("Bottone processato con successo (totale processati: " + totalProcessed + ")");
                         
                     } catch (Exception e) {
-                        System.err.println("Errore nel processare il bottone " + (processedCount + 1) + ": " + e.getMessage());
+                        System.err.println("Errore nel processare il bottone " + (totalProcessed + 1) + ": " + e.getMessage());
                         
                         // In caso di errore, prova comunque a tornare alla tabella
                         try {
                             page.goBack();
                             page.waitForLoadState(LoadState.NETWORKIDLE);
                             page.waitForTimeout(2000);
+                            
+                            // Riclicca su "Da Accettare" per essere sicuri di essere nella sezione corretta
+                            Locator daAccettareTab = page.locator("button[role='tab']:has-text('Da Accettare')").first();
+                            if (daAccettareTab.count() > 0) {
+                                daAccettareTab.click();
+                                page.waitForTimeout(2000);
+                            }
+                            
                         } catch (Exception backError) {
                             System.err.println("Errore nel tornare indietro: " + backError.getMessage());
                         }
                         
-                        processedCount++; // Continua con il prossimo anche se questo ha fallito
+                        totalProcessed++; // Continua con il prossimo anche se questo ha fallito
                     }
                 } else {
+                    System.out.println("Nessun bottone 'Visualizza' rimanente nella pagina corrente");
                     foundMoreButtons = false;
+                }
+                
+                // Sicurezza: evita loop infiniti
+                if (totalProcessed > 50) {
+                    System.out.println("Raggiunto limite massimo di permessi per pagina (50)");
+                    break;
                 }
             }
             
-            System.out.println("Completato processamento di tutti i bottoni nella pagina corrente");
+            System.out.println("Completato processamento di tutti i bottoni nella pagina corrente. Totale processati: " + totalProcessed);
             
         } catch (Exception e) {
             System.err.println("Errore durante il processamento dei permessi: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+ // Metodo per processare la pagina dei dettagli del permesso e accettarlo
+    private void processPermissionDetailsPage(Page page) {
+        try {
+            System.out.println("Processando pagina dettagli permesso...");
+            
+            // Attendi che la pagina dei dettagli sia completamente caricata
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+            page.waitForTimeout(2000);
+            
+            // Cerca il bottone "Accetta Permesso"
+            Locator accettaButton = page.locator(
+                "button:has-text('Accetta Permesso'), " +
+                "button:has-text('ACCETTA PERMESSO'), " +
+                ".MuiButton-root:has-text('Accetta Permesso')"
+            );
+            
+            if (accettaButton.count() > 0) {
+                System.out.println("Trovato bottone 'Accetta Permesso', cliccando...");
+                
+                // Scroll al bottone e clicca
+                accettaButton.first().scrollIntoViewIfNeeded();
+                accettaButton.first().waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(5000));
+                
+               accettaButton.first().click();
+                
+                // Attendi che appaia la finestra di conferma
+                page.waitForTimeout(1500);
+                
+                // Cerca il bottone "Conferma" nella finestra di dialogo
+                Locator confermaButton = page.locator(
+                    "button:has-text('Conferma'), " +
+                    "button:has-text('CONFERMA'), " +
+                    ".MuiButton-root:has-text('Conferma'), " +
+                    "[role='dialog'] button:has-text('Conferma')"
+                );
+                
+                if (confermaButton.count() > 0) {
+                    System.out.println("Trovato bottone 'Conferma' nella finestra di dialogo, cliccando...");
+                    
+                    confermaButton.first().waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000));
+                    
+                    confermaButton.first().click();
+                    
+                    // Attendi che la conferma sia processata
+                    page.waitForTimeout(10000);
+                    
+                    // Cerca il bottone "Ok" finale
+                    Locator okButton = page.locator(
+                        "button:has-text('Ok'), " +
+                        "button:has-text('OK'), " +
+                        ".MuiButton-root:has-text('Ok'), " +
+                        "[role='dialog'] button:has-text('Ok')"
+                    );
+                    
+                    if (okButton.count() > 0) {
+                        System.out.println("Trovato bottone 'Ok' finale, cliccando...");
+                        
+                        okButton.first().waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(5000));
+                        
+                        okButton.first().click();
+                        
+                        // Attendi che il browser torni alla tabella automaticamente
+                       /* page.waitForTimeout(2000);
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
+                        page.waitForTimeout(1000);*/
+                        
+                        System.out.println("Permesso accettato con successo!");
+
+                        Locator daAccettareTab = page.locator("button[role='tab']:has-text('Da Accettare')").first();
+                        daAccettareTab.waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(10000));
+                        daAccettareTab.click();
+                        System.out.println("Click eseguito su 'Da Accettare'post accettazione permesso");
+                        // page.goBack();
+                        
+                    } else {
+                        System.out.println("Bottone 'Ok' finale non trovato");
+                        // Attendi comunque un po' per eventuali redirect automatici
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
+                        page.waitForTimeout(1000);
+                    }
+                    
+                } else {
+                    System.out.println("Bottone 'Conferma' non trovato nella finestra di dialogo");
+                }
+                
+            } else {
+                System.out.println("Bottone 'Accetta Permesso' non trovato nella pagina");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Errore durante l'accettazione del permesso: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -720,35 +822,81 @@ public class SiaeAutomationService {
 
     private void navigateToAssignSection(Page page) {
         page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da assegnare")).click();
+
         Locator button5 = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5"));
-        button5.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        button5.click();
-        Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
-        option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
-        option50.click();
+
+        // Verifica se esiste e visibile entro 3 secondi
+        if (button5.count() > 0) {
+            try {
+                button5.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000)
+                );
+                button5.click();
+
+                Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
+                if (option50.count() > 0) {
+                    option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+                    option50.click();
+                }
+            } catch (PlaywrightException e) {
+                System.out.println("⚠️ Pulsante '5' non trovato o non visibile entro il timeout, proseguo senza selezionare righe per pagina.");
+            }
+        } else {
+            System.out.println("⚠️ Pulsante '5' non presente, proseguo.");
+        }
     }
 
     private void navigateToGiveBackSection(Page page) {
         page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Da riconsegnare")).click();
+
         Locator button5 = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5"));
-        button5.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        button5.click();
-        Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
-        option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
-        option50.click();
+
+        // Verifica se esiste e visibile entro 3 secondi
+        if (button5.count() > 0) {
+            try {
+                button5.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000)
+                );
+                button5.click();
+
+                Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
+                if (option50.count() > 0) {
+                    option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+                    option50.click();
+                }
+            } catch (PlaywrightException e) {
+                System.out.println("⚠️ Pulsante '5' non trovato o non visibile entro il timeout, proseguo senza selezionare righe per pagina.");
+            }
+        } else {
+            System.out.println("⚠️ Pulsante '5' non presente, proseguo.");
+        }
     }
+
 
     private void processAllPagesAssign(Page page) {
         Locator menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("1"));
-        menu.click();
-        page.waitForSelector("ul[role='listbox'] li[role='option']");
-        Locator options = page.locator("ul[role='listbox'] li[role='option']");
-        int optionCount = options.count();
-        options.nth(0).click();  // remove focus
+        int optionCount = 0;
+        if (menu.count() > 0) {
+            try {
+                menu.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000)
+                );
+                menu.click();
+                page.waitForSelector("ul[role='listbox'] li[role='option']");
+                Locator options = page.locator("ul[role='listbox'] li[role='option']");
+                optionCount = options.count();
+                options.nth(0).click();  // remove focus
+            } catch (PlaywrightException e) {
+                System.out.println("⚠️ Menu '1' non trovato o non visibile entro 3 secondi. Processerò come fallback 5 righe.");
+                optionCount = 5;
+            }
+        } else {
+            System.out.println("⚠️ Menu '1' non presente. Processerò come fallback 5 righe.");
+            optionCount = 5;
+        }
 
         for (int i = 0; i < optionCount; i++) {
             System.out.println("▶ Elaboro pagina: " + (i + 1) + "#################");
@@ -829,74 +977,49 @@ public class SiaeAutomationService {
         if (cell.count() > 0 && cell.first().isVisible()) {
             System.out.println("✔ Email trovata nella tabella");
             page.getByRole(AriaRole.RADIO).check();
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
-            // TODO: click su "Conferma"
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
         } else {
             System.out.println("❌ Email non trovata, inserimento manuale");
             page.getByText("Non hai trovato il direttore").click();
             page.getByRole(AriaRole.TEXTBOX).fill(emailToFill);
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
-            // TODO: click su "Conferma"
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
         }
     }
 
     private void processAllPagesGiveBack(Page page) {
-        Locator menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("1"));
-        menu.click();
-        page.waitForSelector("ul[role='listbox'] li[role='option']");
-        Locator options = page.locator("ul[role='listbox'] li[role='option']");
-        int optionCount = options.count();
-        options.nth(0).click();  // remove focus
+        int j=0;
 
-        for (int i = 0; i < optionCount; i++) {
-            System.out.println("▶ Elaboro pagina: " + (i + 1) + "#################");
-            System.out.println("\n");
-            page.waitForSelector("table tbody tr");
-
-            Locator rows = page.locator("table tbody tr");
-            int rowCount = rows.count();
-
-            for (int j = 0; j < rowCount; j++) {
-                try {
-                    processRowGiveBack(page, rows.nth(j), j+1);
-                    saveCheckpoint(i, j + 1); // Salva dopo ogni riga completata
-                } catch (Exception e) {
-                    System.err.println("❌ Errore alla pagina " + (i+1) + ", riga " + (j+1));
-                    saveCheckpoint(i, j); // Salva dove si è fermato
+        while (true) {
+            j++;
+            try {
+                if (processRowGiveBack(page))
+                    saveCheckpoint(0, j + 1);
+                else break;
+            } catch (Exception e) {
+                    System.err.println("❌ Errore alla pagina 0, riga " + (j+1));
+                    saveCheckpoint(0, j); // Salva dove si è fermato
                     throw e; // facoltativo: puoi anche continuare
                 }
             }
-
-            if(i!=optionCount-1) {
-                page.locator("span[title='Previous Page'] + span button").click();
-                page.waitForTimeout(1000);
-            }
         }
-    }
 
-    private void processRowGiveBack(Page page, Locator row, int index) {
-        System.out.println("Record numero " + index +": clic su 'assegna'");
-        // Stampa contenuto effettivo della riga
-        Locator cells = row.locator("td");
-        int cellCount = cells.count();
+    private boolean processRowGiveBack(Page page) {
 
-        StringBuilder rowContent = new StringBuilder("📄 Riga " + index + ": ");
-        for (int i = 0; i < cellCount; i++) {
-            try {
-                String text = cells.nth(i).innerText().trim();
-                if (!text.isEmpty()) {
-                    rowContent.append("[").append(text).append("] ");
-                }
-            } catch (Exception e) {
-                rowContent.append("[Errore lettura cella] ");
-            }
-        }
-        System.out.println(rowContent);
+        page.waitForTimeout(3000);
+        System.out.println("Ho aspettato");
+        Locator assegnaButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName("Visualizza")
+                        .setExact(false)
+        );
 
-        Locator assegnaButton = row.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("visualizza"));
         if (assegnaButton.count() > 0) {
+            System.out.println("✅ Trovato un visualizza");
             assegnaButton.first().click();
+        } else {
+            System.out.println("✅ Dati finiti: nessun bottone 'visualizza' trovato nella riga.");
+            return false;
         }
 
         Locator noPageLocator = page.getByText("Si è verificato un errore",
@@ -913,7 +1036,7 @@ public class SiaeAutomationService {
             System.out.println("Elemento ‘Si è verificato un errore’ trovato");
             page.goBack();
             page.waitForTimeout(1000);
-            return;
+            return true;
         }
 
         // Clic su "Riconsegna a SIAE"
@@ -929,12 +1052,39 @@ public class SiaeAutomationService {
             page.getByRole(AriaRole.TEXTBOX).click();
             // Inserisce testo nel campo
             page.getByRole(AriaRole.TEXTBOX).fill("Riconsegna automatizzata");
-            // Sostituisce la conferma con "Annulla"
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
+            // Conferma effettiva
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
             page.waitForTimeout(1000);
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
-            return;
+            return true;
         }
+
+        try {
+            // Cerca il gruppo con il testo "Vuoi riconsegnare il PM a"
+            Locator giveBackText = page.getByRole(
+                    AriaRole.GROUP,
+                    new Page.GetByRoleOptions().setName("Vuoi riconsegnare il PM a")
+            );
+
+            // Attende che il gruppo sia visibile entro 5 secondi
+            giveBackText.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+
+            // Clicca sul primo div dentro il gruppo
+            giveBackText.locator("div").first().click();
+        } catch (PlaywrightException e) {
+            // Se il gruppo non è presente o cliccabile, continua senza errori
+            System.out.println("Elemento 'Vuoi riconsegnare il PM a' non trovato o non cliccabile, si prosegue.");
+        }
+
+        try {
+            // Attende che il campo sia visibile entro 5 secondi (5000 ms)
+            Locator motivoCancellazione = page.locator("#filled-input-cancellation-reason");
+            motivoCancellazione.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            motivoCancellazione.fill("Riconsegna automatizzata");
+        } catch (TimeoutError e) {
+            // L'elemento non è stato trovato entro 5 secondi, prosegue senza fare nulla
+            System.out.println("Campo motivo cancellazione non trovato, si prosegue.");
+        }
+
 
         // Seleziona radio "Programma artista principale"
         Locator radio = page.getByRole(AriaRole.RADIO, new Page.GetByRoleOptions().setName("Programma artista principale"));
@@ -942,11 +1092,9 @@ public class SiaeAutomationService {
             radio.check();
         }
 
-        //TODO Clic su "Annulla" da sostituire con click su conferma
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Annulla")).click();
-
-        // Clic su "PROGRAMMI MUSICALI"
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("PROGRAMMI MUSICALI")).click();
+        //Conferma effettiva
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Conferma")).click();
+        return true;
     }
 
     private static final String CHECKPOINT_PATH = "../../Checkpoints/checkpoint.properties";
