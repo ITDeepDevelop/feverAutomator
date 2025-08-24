@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 //package com.automator.Pages;
 
 import com.automator.controller.SiaeController;
+import com.automator.model.services.Credenziale;
+import com.automator.model.services.CredenzialiManager;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -18,11 +20,15 @@ public class SiaePage extends BorderPane {
     private final SiaeController siaeController;
     private final TextField emailField;
     private final PasswordField passwordField;
+    
+    private final CredenzialiManager credenzialiManager;
+    private final ListView<Credenziale> savedList;
 
 
 
     public SiaePage() {
         siaeController = new SiaeController();
+        credenzialiManager = new CredenzialiManager();
         // Sezione credenziali migliorata
         Label credentialsTitle = new Label("Credenziali di Accesso");
         credentialsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
@@ -102,7 +108,7 @@ public class SiaePage extends BorderPane {
         passwordBox.getChildren().addAll(passwordContainer, togglePasswordButton);
         passwordBox.setAlignment(Pos.CENTER_LEFT);
 
-        VBox credentialsBox = new VBox(8);
+        /*VBox credentialsBox = new VBox(8);
         credentialsBox.getChildren().addAll(
             credentialsTitle,
             new VBox(5, emailLabel, emailField),
@@ -111,6 +117,44 @@ public class SiaePage extends BorderPane {
         credentialsBox.setPadding(new Insets(20));
         credentialsBox.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; " +
             "-fx-border-color: #e9ecef; -fx-border-radius: 8;");
+        credentialsBox.setPrefWidth(320);*/
+        // ----------------- LISTA CREDENZIALI -----------------
+        Label savedTitle = new Label("Credenziali salvate");
+        savedTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        savedList = new ListView<>();
+        savedList.setPrefHeight(150);
+        aggiornaListaCredenziali();
+
+        savedList.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Credenziale cred, boolean empty) {
+                super.updateItem(cred, empty);
+                if (empty || cred == null) {
+                    setText(null);
+                } else {
+                    setText(cred.getEmail() + " | ****");
+                }
+            }
+        });
+
+        savedList.setOnMouseClicked(event -> {
+            Credenziale selected = savedList.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                emailField.setText(selected.getEmail());
+                passwordField.setText(selected.getPassword());
+            }
+        });
+
+        VBox credentialsBox = new VBox(8,
+                credentialsTitle,
+                new VBox(5, emailLabel, emailField),
+                new VBox(5, passwordLabel, passwordBox),
+                savedTitle,
+                savedList
+        );
+        credentialsBox.setPadding(new Insets(20));
+        credentialsBox.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; " +
+                "-fx-border-color: #e9ecef; -fx-border-radius: 8;");
         credentialsBox.setPrefWidth(320);
 
         // Sezione operazioni migliorata
@@ -242,6 +286,8 @@ public class SiaePage extends BorderPane {
         String password = passwordField.getText();
         // Esegui operazione 1
         boolean success = siaeController.handleOperation("Richiesta permesso per un evento", email, password);
+        if (success) credenzialiManager.aggiungi(email, password);
+        aggiornaListaCredenziali();
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
@@ -253,6 +299,8 @@ public class SiaePage extends BorderPane {
         
         // Esegui operazione 2 (Accettazione Permessi)
         boolean success = siaeController.handleOperation("Accettazione Permessi", email, password);
+        if (success) credenzialiManager.aggiungi(email, password);
+        aggiornaListaCredenziali();
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
@@ -264,6 +312,8 @@ public class SiaePage extends BorderPane {
         
         // Esegui operazione 3 (Assegna Bordero)
         boolean success = siaeController.handleOperation("Assegna Bordero", email, password);
+        if (success) credenzialiManager.aggiungi(email, password);
+        aggiornaListaCredenziali();
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
@@ -275,6 +325,8 @@ public class SiaePage extends BorderPane {
         
         // Esegui operazione 4 (Riconsegna Bordero)
         boolean success = siaeController.handleOperation("Riconsegna Bordero", email, password);
+        if (success) credenzialiManager.aggiungi(email, password);
+        aggiornaListaCredenziali();
         updateStatusIcon(statusIcon, success ? "success" : "error");
     }
 
@@ -299,5 +351,8 @@ public class SiaePage extends BorderPane {
                     icon.setStroke(Color.web("#7f8c8d"));
             }
         });
+    }
+    private void aggiornaListaCredenziali() {
+        savedList.getItems().setAll(credenzialiManager.getAll());
     }
 }
