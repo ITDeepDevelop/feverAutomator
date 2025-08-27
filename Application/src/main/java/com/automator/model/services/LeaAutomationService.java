@@ -50,7 +50,7 @@ public class LeaAutomationService {
     private static final String CONSENT1_SELECTOR = "label[for='consent_1']";
     private static final String CONSENT7_SELECTOR = "label[for='consent_7']";
     private static final String LICENSE_DATE_SELECTOR = "#license_start_date";
-    private static final String DOWNLOAD_LINK_TEXT = "Scarica license";
+    private static final String DOWNLOAD_LINK_TEXT = "Scarica licenza";
     private static final String NAV_LINK_LOGIN = "Accedi person";
     private static final String NAV_LINK_LICENSES = "Licenze description";
     private static final String DOWNLOAD_FOLDER = "LeaDownloads";
