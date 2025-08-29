@@ -793,7 +793,7 @@ public class SiaeAutomationService {
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CONFIRM)).click();
             }
             else {
-                navigateToAssignSection(page);
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_PROGRAMMI_MUSICALI)).click();
             }
         } else {
             logger.info(" Email non trovata, inserimento manuale");
@@ -804,7 +804,7 @@ public class SiaeAutomationService {
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CONFIRM)).click();
             }
             else {
-                navigateToAssignSection(page);
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_PROGRAMMI_MUSICALI)).click();
             }
         }
     }
