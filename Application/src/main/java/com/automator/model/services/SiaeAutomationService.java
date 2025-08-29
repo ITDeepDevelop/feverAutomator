@@ -35,6 +35,8 @@ public class SiaeAutomationService {
     private static final Logger logger = LoggerFactory.getLogger(SiaeAutomationService.class);
 
     private boolean TEST_MODE = true;
+    private static final int DEFAULT_PAGES_ASSIGN_BORDERO = 10;
+    private static final int MAX_ATTEMPTS_PER_METHOD = 1;
 
     // ================================
     // CONSTANTS
@@ -76,7 +78,6 @@ public class SiaeAutomationService {
     private static final String PDF_SUBFOLDER = "LeaDownloads";
 
     private static final String DEFAULT_RETURN_REASON = "Riconsegna automatizzata";
-    private static final int DEFAULT_PAGES_ASSIGN_BORDERO = 10;
 
     public boolean createPermission(String email, String password) {
 
@@ -396,10 +397,11 @@ public class SiaeAutomationService {
     }
 
     public boolean givebackBordero(String email, String password) {
-        int maxAttempts = 2;
+        int maxAttempts = MAX_ATTEMPTS_PER_METHOD;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try (Playwright playwright = Playwright.create()) {
-                logger.info(" Tentativo " + attempt + " di " + maxAttempts);
+                logger.info("RICONSEGNA BORDERO:  Tentativo " + attempt + " di " + maxAttempts);
+                System.out.println("RICONSEGNA BORDERO:  Tentativo " + attempt + " di " + maxAttempts);
                 Browser browser = launchBrowser(playwright);
                 BrowserContext context = browser.newContext();
                 Page page = context.newPage();
@@ -412,9 +414,11 @@ public class SiaeAutomationService {
                 page.close();
                 browser.close();
                 logger.info(" Operazione riuscita al tentativo " + attempt);
+                System.out.println(" Operazione riuscita al tentativo " + attempt);
                 return true;
             } catch (Exception e) {
                 logger.error(" Errore al tentativo " + attempt);
+                System.out.println(" Errore al tentativo " + attempt);
                 e.printStackTrace();
                 if (attempt == maxAttempts) {
                     logger.error(" Tutti i tentativi falliti.");
@@ -431,11 +435,15 @@ public class SiaeAutomationService {
 
     private void loginToSiaeBorderoPage(Page page, String email, String password) {
         page.navigate(SIAE_URL);
+        logger.info("Navigating to " + SIAE_URL);
+        System.out.println("Navigating to " + SIAE_URL);
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_ACCEPT_COOKIES)).click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_LOGIN).setExact(true)).click();
         page.locator(INPUT_TEXT_SELECTOR).fill(email);
         page.locator(INPUT_PASSWORD_SELECTOR).fill(password);
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_LOGIN)).click();
+        logger.info("Logging in...");
+        System.out.println("Logging in...");
         page.locator(FORM_PORTALE_BORDERO)
                 .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName(BUTTON_LOGIN))
                 .click();
@@ -444,28 +452,13 @@ public class SiaeAutomationService {
     private void navigateToAssignSection(Page page) {
         page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName(TEXT_DA_ASSEGNARE)).click();
 
-        Locator button5 = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("5"));
+        logger.info("Navigating to assign bordero page");
+        System.out.println("Navigating to assign bordero page");
 
-        // Verifica se esiste e visibile entro 3 secondi
-        if (button5.count() > 0) {
-            try {
-                button5.waitFor(new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.VISIBLE)
-                        .setTimeout(3000)
-                );
-                button5.click();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Data")).click();
+        page.waitForTimeout(3000);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Data")).click();
 
-                Locator option50 = page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName("50"));
-                if (option50.count() > 0) {
-                    option50.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
-                    option50.click();
-                }
-            } catch (PlaywrightException e) {
-                logger.info(" Pulsante '5' non trovato o non visibile entro il timeout, proseguo senza selezionare righe per pagina.");
-            }
-        } else {
-            logger.info(" Pulsante '5' non presente, proseguo.");
-        }
     }
 
     private void navigateToGiveBackSection(Page page) {
@@ -735,11 +728,11 @@ public class SiaeAutomationService {
     }
 
     public boolean assignBordero(String email, String password) {
-        int maxAttempts = 2;
+        int maxAttempts = MAX_ATTEMPTS_PER_METHOD;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try (Playwright playwright = Playwright.create()) {
-                logger.info("Tentativo " + attempt + " di " + maxAttempts);
-                System.out.println("Tentativo " + attempt + " di " + maxAttempts);
+                logger.info("ASSIGN BORDERO: Tentativo " + attempt + " di " + maxAttempts);
+                System.out.println("ASSIGN BORDERO: Tentativo " + attempt + " di " + maxAttempts);
                 Browser browser = launchBrowser(playwright);
                 BrowserContext context = browser.newContext();
                 Page page = context.newPage();
@@ -770,29 +763,7 @@ public class SiaeAutomationService {
 
 
     private void processAllPagesAssign(Page page) {
-        Locator menu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("1"));
-        int optionCount = 0;
-        if (menu.count() > 0) {
-            try {
-                menu.waitFor(new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.VISIBLE)
-                        .setTimeout(3000)
-                );
-                menu.click();
-                page.waitForSelector("ul[role='listbox'] li[role='option']");
-                Locator options = page.locator("ul[role='listbox'] li[role='option']");
-                optionCount = options.count();
-                options.nth(0).click();  // remove focus
-            } catch (PlaywrightException e) {
-                logger.info(" Menu '1' non trovato o non visibile entro 3 secondi. Processerò come fallback " + DEFAULT_PAGES_ASSIGN_BORDERO +" pagine.");
-                System.out.println(" Menu '1' non trovato o non visibile entro 3 secondi. Processerò come fallback " + DEFAULT_PAGES_ASSIGN_BORDERO +" pagine.");
-                optionCount = DEFAULT_PAGES_ASSIGN_BORDERO;
-            }
-        } else {
-            logger.info(" Menu '1' non presente. Processerò come fallback " + DEFAULT_PAGES_ASSIGN_BORDERO +" pagine.");
-            System.out.println(" Menu '1' non presente. Processerò come fallback " + DEFAULT_PAGES_ASSIGN_BORDERO +" pagine.");
-            optionCount = DEFAULT_PAGES_ASSIGN_BORDERO;
-        }
+        int optionCount = DEFAULT_PAGES_ASSIGN_BORDERO;
 
         for (int i = 0; i < optionCount; i++) {
             logger.info(" Elaboro pagina: " + (i + 1) + " #################");
@@ -810,8 +781,8 @@ public class SiaeAutomationService {
                 } catch (Exception e) {
                     logger.error(" Errore alla pagina " + (i+1) + ", riga " + (j+1));
                     System.out.println(" Errore alla pagina " + (i+1) + ", riga " + (j+1));
-                    saveCheckpoint(i, j); // Salva dove si è fermato
-                    throw e; // facoltativo: puoi anche continuare
+                    saveCheckpoint(i, j);
+                    throw e;
                 }
             }
 
