@@ -66,6 +66,7 @@ public class SiaeAutomationService {
     private static final String BUTTON_ASSEGNA = "assegna";
     private static final String BUTTON_SEARCH = "Cerca";
     private static final String BUTTON_CONFIRM = "Conferma";
+    private static final String BUTTON_CANCEL = "Annulla";
     private static final String BUTTON_PROGRAMMI_MUSICALI = "PROGRAMMI MUSICALI";
     private static final String BUTTON_RICONSEGNA = "Riconsegna a SIAE";
 
@@ -858,7 +859,7 @@ public class SiaeAutomationService {
         while (true) {
             j++;
             try {
-                if (processRowGiveBack(page)) {}
+                if (processRowGiveBack(page)) continue;
                 else break;
             } catch (Exception e) {
                 logger.error(" Errore alla pagina 0, riga " + (j+1));
@@ -919,7 +920,8 @@ public class SiaeAutomationService {
             if (!TEST_MODE) {
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CONFIRM)).click();
             } else {
-                navigateToGiveBackSection(page);
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CANCEL)).click();
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_PROGRAMMI_MUSICALI)).click();
             }
             page.waitForTimeout(1000);
             return true;
@@ -961,7 +963,8 @@ public class SiaeAutomationService {
         if (!TEST_MODE) {
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CONFIRM)).click();
         } else {
-            navigateToGiveBackSection(page);
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_CANCEL)).click();
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(BUTTON_PROGRAMMI_MUSICALI)).click();
         }
         return true;
     }
