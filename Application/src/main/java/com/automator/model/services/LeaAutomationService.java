@@ -30,6 +30,7 @@ public class LeaAutomationService {
     private List<EventoRow> eventListFromExcel;
     
     private boolean TEST_MODE = true;
+    private static final int MAX_ATTEMPTS_PER_METHOD = 1;
 
     // COSTANTS
     private static final String HOMEPAGE_URL = "https://licence.soundreef.com/it/";
@@ -355,10 +356,12 @@ public class LeaAutomationService {
 
 
     public boolean downloadLicenses(String email, String password, String month, String year) {
-        int maxAttempts = 2;
+        int maxAttempts = MAX_ATTEMPTS_PER_METHOD;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try (Playwright playwright = Playwright.create()) {
+                logger.info("DOWNLOAD LICENSES: Tentativo " + attempt + " di " + maxAttempts);
+                System.out.println("DOWNLOAD LICENSES: Tentativo " + attempt + " di " + maxAttempts);
                 Browser browser = startBrowser();
                 BrowserContext context = createContextDownload(browser);
                 Page page = context.newPage();
@@ -366,8 +369,8 @@ public class LeaAutomationService {
                 performLoginSoundreef(page, email, password);
                 navigateToLicensesSection(page);
 
-                List<EventoRow> eventsDaScaricare = loadEventsFromExcel();
-                processEventsToDownload(eventsDaScaricare, page, year, month);
+                List<EventoRow> eventsToDownload = loadEventsFromExcel();
+                processEventsToDownload(eventsToDownload, page, year, month);
 
                 context.close();
                 browser.close();
@@ -375,9 +378,11 @@ public class LeaAutomationService {
 
             } catch (Exception e) {
                 logger.error("Errore al tentativo " + attempt);
+                System.out.println("Errore al tentativo " + attempt);
                 e.printStackTrace();
                 if (attempt == maxAttempts) {
                     logger.error("Tutti i tentativi falliti.");
+                    System.out.println("Tutti i tentativi falliti.");
                     return false;
                 }
             }
@@ -398,6 +403,8 @@ public class LeaAutomationService {
     }
 
     private void performLoginSoundreef(Page page, String email, String password) {
+        logger.info("Navigating to " + HOMEPAGE_URL);
+        System.out.println("Navigating to " + HOMEPAGE_URL);
         page.navigate(HOMEPAGE_URL);
 
         page.getByRole(AriaRole.NAVIGATION)
@@ -409,7 +416,9 @@ public class LeaAutomationService {
 
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(LOGIN_BUTTON_TEXT)).click();
 
-        // Accetta i cookie se presente
+        logger.info("Logging in...");
+        System.out.println("Logging in...");
+
         Locator allowCookies = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Allow all cookies"));
         if (allowCookies.count() > 0) {
             allowCookies.click();
@@ -417,6 +426,8 @@ public class LeaAutomationService {
     }
 
     private void navigateToLicensesSection(Page page) {
+        logger.info("Navigating to Licenses Section " + LICENSES_URL);
+        System.out.println("Navigating to Licenses Section " + LICENSES_URL);
         page.getByRole(AriaRole.NAVIGATION)
                 .getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName(NAV_LINK_LICENSES))
                 .click();
@@ -425,6 +436,8 @@ public class LeaAutomationService {
     }
 
     private List<EventoRow> loadEventsFromExcel() {
+        logger.info("Carico gli eventi da Excel ");
+        System.out.println("Carico gli eventi da Excel ");
         try {
             ExcelReader reader = new ExcelReader();
             reader.read(ExcelStorage.getInstance().getFile());
@@ -438,6 +451,7 @@ public class LeaAutomationService {
     private void processEventsToDownload(List<EventoRow> events, Page page, String year, String month) throws Exception {
         for (EventoRow event : events) {
             logger.info("Analizzo il PDF: " + event);
+            System.out.println("Analizzo il PDF: " + event);
             page.navigate(LICENSES_URL);
             page.waitForTimeout(1000);
 
@@ -449,10 +463,12 @@ public class LeaAutomationService {
 
             if (count == 0) {
                 logger.info("Nessun elemento trovato per: " + eventName);
+                System.out.println("Nessun elemento trovato per: " + eventName);
                 continue;
             }
 
             logger.info("Trovati " + count + " elementi per: " + eventName);
+            System.out.println("Trovati " + count + " elementi per: " + eventName);
             boolean reachedRightTime = false;
 
             for (int i = 0; i < count; i++) {
@@ -467,6 +483,8 @@ public class LeaAutomationService {
                 String dateValue = dateLocator.getAttribute("value");
 
                 if (matchesYearMonth(dateValue, Integer.parseInt(year), Integer.parseInt(month))) {
+                    logger.info("Ho raggiunto un evento con mese " + month + " e anno " + year);
+                    System.out.println("Ho raggiunto un evento con mese " + month + " e anno " + year);
                     reachedRightTime = true;
                     downloadLicenses(event, page, time);
                 } else if (reachedRightTime) {
@@ -477,6 +495,8 @@ public class LeaAutomationService {
     }
 
     private void downloadLicenses(EventoRow event, Page page, String time) throws Exception {
+        logger.info("Scarico il file nella cartella Desktop/" + DOWNLOAD_FOLDER);
+        System.out.println("Scarico il file nella cartella Desktop/" + DOWNLOAD_FOLDER);
         Download download = page.waitForDownload(() -> {
             page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(DOWNLOAD_LINK_TEXT)).click();
         });
@@ -488,8 +508,10 @@ public class LeaAutomationService {
         Path pathFinale = downloadDir.resolve(firstNameFile);
 
         logger.info("Salvo file con Evento: " + event.getNomeEventoELocation() + " | Data: " + event.getDataEvento() + " | Ora: " + time);
+        System.out.println("Salvo file con Evento: " + event.getNomeEventoELocation() + " | Data: " + event.getDataEvento() + " | Ora: " + time);
         download.saveAs(pathFinale);
         logger.info("File salvato in: " + pathFinale.toAbsolutePath());
+        System.out.println("File salvato in: " + pathFinale.toAbsolutePath());
     }
 
     public boolean matchesYearMonth(String value, int expectedYear, int expectedMonth) {
